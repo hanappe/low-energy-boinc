@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Low-energy BOINC</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <div class="content">
+
+      <div class="header">Low-energy BOINC</div>
+      <div class="menubar">
+        <div class="pagemenu">
+          <div class="menuitem"><a class="pagemenu" href="index.html">About</a></div>
+          <div class="menuitem"><a class="pagemenu" href="monitor.html">Monitor</a></div>
+          <div class="menuitem"><a class="pagemenu" href="sensors.html">Sensors</a></div>
+          <div class="menuitem menuitem_selected">Driver</div>
+          <div class="menuitem"><a class="pagemenu" href="analysis.html">Analysis</a></div>
+          <div class="menuitem"><a class="pagemenu" href="info/">Wiki</a></div>
+          <!-- <a class="pagemenu" href="participate.html">Participate</a> -->
+          <div class="menuitem"><a class="pagemenu" href="low-energy-boinc/">Log in</a></div>
+          <div class="line"></div>
+        </div>
+      </div>
+
+      <div class="text">
+
+        <p>
+          Volunteer computing applications generally run when the PC owner is
+          away from his desk and the machine is idle. We believe that a higher
+          efficiency, in terms of computation performed per unit of energy
+          consumed, when the computation is executed when the user is working on
+          the machine. After all, even when you are working intensively, the
+          usage of the CPU rarely goes over 20% of its capacities.
+        </p>
+
+        <p>
+          To run the computation in the background, a number of
+          precautions have to be taken, though. In particular, the
+          BOINC application must avoid putting the machine in a
+          high-performance mode. Because the application is
+          CPU-intensive, a high-performance mode is normally a good
+          idea if you ignore the energy consumption.  The performance
+          mode of your machine is selected by the operating
+          system. Unfortunately, there currently exists no means for
+          an application to dictate its CPU performance mode. So that
+          is why we investigated in ways to work around this. 
+        </p>
+
+
+        <p>
+        We developed a Windows driver to help monitor and control the
+        energy consumption of Desktop Grids. The role of the driver is
+        twofold: To obtain detailed information about the CPU's
+        performance states (P-state) on Windows, To give individual
+        application control over the CPU's P-state when they are
+        executing.  The active P-state is normally managed by the
+        operating system. Using this driver, applications can by-pass
+        the OS and can talk to the CPU's P-state mechanism directly.
+        </p>
+
+        <p style="text-align: center;"><img src="driver.png" width="200px" /></p>
+
+        <p>
+          To communicate the requested P-state to the CPU requires
+          writing hardware specific bit patterns to special
+          addresses. The information about these addresses, the bit
+          patterns, and which method to use to read/write the data is
+          extracted from the hardware description provided by the ACPI
+          sub-system.
+        </p>
+
+        <p>
+          The development of the Windows driver is severely hampered
+          by the lack of Microsoft's documentation on its ACPI
+          interface, the appropriate position where to insert the
+          driver into the Windows driver stack, and the Windows kernel
+          API in general. After much effort, we managed to develop a
+          driver that inserts itself on top of the CPU driver. This
+          allows the driver to obtain the required information from
+          the ACPI sub-system.
+        </p>
+
+        <p>
+          The driver further creates a special file handle through
+          which user-space applications can communicate. The driver
+          also creates a kernel thread that periodically attaches to
+          each CPU in the system. For each CPU, it collects data about
+          the current values of the P-state. Applications can read the
+          statistics gathered by the driver. This information is
+          formatted similarly to the data obtained on the Linux
+          kernel: the amount of time each CPU has spent in each
+          P-state since the start of the system. Applications can also
+          request the driver to maintain the P-state of a specific CPU
+          at a specific value. The driver will then periodically check
+          the current P-state and override any values that do not
+          correspond to the requested value. Because the update period
+          of the driver is higher than that of the Windows OS, the
+          performance state can is nearly continuously kept at the
+          requested value.
+        </p>
+
+        <p>
+          The installation of the driver requires administrator
+          privileges on the target machine.
+        </p>
+
+        <p>
+          A compact user-space application has been developed to
+          interact with the driver. The API is as follows:
+        </p>
+
+        <div class="api_entry">
+          <div class="api_fun">LPCInterface* LPCInterfaceNew();</div>
+          <div class="api_doc">Obtain a handle to the LPC system (LPC stands for Low-Power Computing).</div>
+        </div>
+
+        <div class="api_entry">
+          <div class="api_fun">void LPCInterfaceDelete(LPCInterface* lpci);</div>
+          <div class="api_doc">Delete the handle.</div>
+        </div>
+
+        <div class="api_entry">
+          <div class="api_fun">char* LPCGetErrorMessage(LPCInterface* lpci);</div>
+          <div class="api_doc">Obtain the most recent error message, if any.</div>
+        </div>
+
+        <div class="api_entry">
+          <div class="api_fun">int LPCGetConfig(LPCInterface* lpci, LPCConfiguration* cfg);</div>
+          <div class="api_doc">Obtain the current configuration settings of the driver. The configuration includes among other the update period of the kernel thread.</div>
+        </div>
+
+        <div class="api_entry">
+          <div class="api_fun">int LPCSetPstate(LPCInterface* lpci, unsigned int cpu, unsigned int pstate);</div>
+          <div class="api_doc">Set the current P-state on the specified CPU. Application that want to control the P-state should periodically check on which CPU they run and inform the driver to maintain a given P-state. The period with which the driver expects an update message from the application can be configured.</div>
+        </div>
+
+        <div class="api_entry">
+          <div class="api_fun">LPCPstateStats* LPCGetStats(LPCInterface* lpci);</div>
+          <div class="api_doc">Obtain the statistics about the P-states: the amount of time each CPU has spent in each P-state since the start of the system.</div>
+        </div>
+
+      </div>
+    </div>
+  </body>
+</html>
+
+

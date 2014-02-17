@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Low-energy BOINC</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <div class="content">
+
+      <div class="header">Low-energy BOINC</div>
+      <div class="menubar">
+        <div class="pagemenu">
+          <div class="menuitem"><a class="pagemenu" href="index.html">About</a></div>
+          <div class="menuitem menuitem_selected">Monitor</div>
+          <div class="menuitem"><a class="pagemenu" href="sensors.html">Sensors</a></div>
+          <div class="menuitem"><a class="pagemenu" href="driver.html">Driver</a></div>
+          <div class="menuitem"><a class="pagemenu" href="analysis.html">Analysis</a></div>
+          <div class="menuitem"><a class="pagemenu" href="info/">Wiki</a></div>
+          <!-- <a class="pagemenu" href="participate.html">Participate</a> -->
+          <div class="menuitem"><a class="pagemenu" href="low-energy-boinc/">Log in</a></div>
+          <div class="line"></div>
+        </div>
+      </div>
+
+      <div class="text">
+
+        <p>
+          We developed a BOINC application that gathers data from participating
+          machines. When a volunteer registers to the low-energy BOINC project
+          (not yet possible at the time of writing), a non-cpu-intensive BOINC
+          application is downloaded and run on the volunteers PC. This
+          application gathers information about the performance, the energy use,
+          and the environment and uploads it to the server.
+        </p>
+
+        <p>
+          Below you can get an idea of how the pieces fit
+          together. All the data is uploaded
+          to <a href="OpenSensorData.net">OpenSensorData.net</a>, but
+          can be viewed online on this site in your account section.
+        </p>
+
+        <p style="text-align: center;"><img src="app.png" width="300px" /></p>
+
+        <p>
+          The data that we are interested in includes:
+        </p>
+
+        <table class="parameters">
+          <tr>
+            <td class="header">Variable</td>
+            <td class="header">Explanation</td>
+            <td class="header">Measurement period </td>
+          </tr>
+
+          <tr>
+            <td class="bold">Power usage</td>
+            <td>Understanding the power usage of DG computers is the main target of our study. We aim at measuring the instantaneous energy consumption to obtain a dynamic profile of the machine.</td>
+            <td>1 sec</td>
+          </tr>
+
+          <tr>
+            <td class="bold">P-state</td>
+            <td>The CPU can be in one of several performance states (P-state). With each P-state is associated a different clock-frequency (and voltage) but also a different power consumption. It is therefore an important to trace the active P-state to evaluate the performance/energy ratio of a machine.</td>
+            <td>15 sec</td>
+          </tr>
+
+          <tr>
+            <td class="bold">CPU load</td>
+            <td>The CPU load indicates the percentage of time that the CPU is running processes. All activities are accounted for, including system services, BOINC processes, and user applications.  Inversely, it allows measuring the percentage of time that the machine is idle.</td>
+            <td>5 sec </td>
+          </tr>
+
+          <tr>
+            <td class="bold">CPU load of BOINC applications</td>
+            <td>This is the percentage of time that the CPU is used by BOINC applications.</td>
+            <td>5 sec</td>
+          </tr>
+
+          <tr>
+            <td class="bold">Progress of BOINC workunits</td>
+            <td>Monitoring the progress of the computation helps us estimate the performance of the machine, taking into consideration the BOINC settings such a CPU throttling.</td>
+            <td>1 min</td>
+          </tr>
+
+          <tr>
+            <td class="bold">CPU load of user applications</td>
+            <td>This is the percentage of time that the CPU is used by user applications. It allows to have an idea how much the CPU is actually used by the user.</td>
+            <td>5 sec</td>
+          </tr>
+
+          <tr>
+            <td class="bold">CPU benchmark</td>
+            <td>This is a non-dynamic variable that is already measured by the BOINC framework using the Drystone/Whetstone benchmarks. It is used to compute the FLOPS/Watt of the machine.</td>
+            <td>-</td>
+          </tr>
+
+          <tr>
+            <td class="bold">BOINC CPU%</td>
+            <td>Another non-dynamic variable that is important to know to interpret the results.</td>
+            <td>-</td>
+          </tr>
+
+          <tr>
+            <td class="bold">Ambient temperature</td>
+            <td>The ambient temperature measure the room temperature of the machine. When combined with meteorological information of the location, it gives us an indication of whether the room is being heated or cooled.</td>
+            <td>15 min</td>
+          </tr>
+
+          <tr>
+            <td class="bold">User absent or not</td>
+            <td>When the user is present and working on the machine, the energy consumption can be accounted differently. On Linux, this variable is derived from the CPU load of the user applications. </td>
+            <td>1 min</td>
+          </tr>
+
+          <tr>
+            <td class="bold">Fan speed</td>
+            <td>The fan speed gives us a further indication of how intensively a machine is used. It also gives feedback on whether the machine has entered a regime in which a high CPU becomes disturbing for the user.</td>
+            <td>5 sec</td>
+          </tr>
+
+          <tr>
+            <td class="bold">CPU temperature</td>
+            <td>Similar to the fan speed, the CPU temperature gives an indication on how the machine reacts under intensive use.</td>
+            <td>5 sec</td>
+          </tr>
+
+          <tr>
+            <td class="bold">Other</td>
+            <td>Some chips (memory controllers, I/O chips) in the machine have other sensors (like temperature) that may be accessible.</td>
+            <td>-</td>
+          </tr>
+        </table>
+
+      </div>
+    </div>
+  </body>
+</html>
+
+

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Low-energy BOINC</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <div class="content">
+
+      <div class="header">Low-energy BOINC</div>
+      <div class="menubar">
+        <div class="pagemenu">
+          <div class="menuitem"><a class="pagemenu" href="index.html">About</a></div>
+          <div class="menuitem"><a class="pagemenu" href="monitor.html">Monitor</a></div>
+          <div class="menuitem"><a class="pagemenu" href="sensors.html">Sensors</a></div>
+          <div class="menuitem"><a class="pagemenu" href="driver.html">Driver</a></div>
+          <div class="menuitem menuitem_selected">Analysis</div>
+          <div class="menuitem"><a class="pagemenu" href="info/">Wiki</a></div>
+          <!-- <a class="pagemenu" href="participate.html">Participate</a> -->
+          <div class="menuitem"><a class="pagemenu" href="low-energy-boinc/">Log in</a></div>
+          <div class="line"></div>
+        </div>
+      </div>
+
+      <div class="text">
+
+        <p>
+          The goal of this project is to evaluate how much energy is
+          consumed by DG, and how this compares to the energy consumed
+          by more conventional solutions, such as computing clusters
+          and cloud computing. The general understanding is that DG
+          requires less energy than the other solution but we lack
+          real figures to validate this hypothesis. With this work we
+          want to remedy this shortcoming. In addition, it can provide
+          valuable information about we can further reduce the energy
+          of DG solutions.
+        </p>
+
+        <p>
+          The first reaction would be to simply measure how much
+          energy a system consumes. However, we have also to take into
+          account how much computing it performs. So it seems more
+          appropriate to look at the amount of computation performed
+          PER unit of energy that goes into the system, or the
+          Performance/Watt.
+        </p>
+
+        <p>
+          The performance of a system roughly means the speed of
+          computation of the machine. The performance is, in itself, a
+          flexible concept, but we will make the following
+          assumptions:
+
+          <ul>
+            <li>We deal with scientific computing applications that
+            are CPU bound. In this case the classical measures
+            (Whetstone, CPU2006, or LINPACK) may be sufficient.</li>
+
+            <li>We perform "embarrassingly parallel" problems. All
+            tasks are computed independently. We therefore assume that
+            the performance of the DG/cluster is the sum of the
+            performance of the PCs/nodes.</li>
+          </ul>
+        </p>
+
+        <p>
+          The Performance/Watt thus seems a good measure to evaluate a
+          system. However, computers in a DG are "time-sharing"
+          systems: the machine is used both for the scientific
+          computation and for its "regular" use, for example, office
+          applications or web services. We should therefore be more
+          precise in how we compute the energy consumption of the
+          machine since part of the consumption is due to the other
+          uses. 
+        </p>
+
+        <p>
+          There are three canonical situations:
+          <ul>
+            <li>The machine is turned to only to run DG
+              applications. In this case 100% of the energy used by
+              the machine will be accounted for.</li>
+
+            <li>The machine periodically runs DG applications, when
+              the machine is considered idle. When the machine is used for
+              other purposes, no DG applications run. For example, it is
+              possible to configure BOINC such that it only runs
+              computations when the user is absent at the night. In this
+              case only the energy during the periods when the scientific
+              applications run should be taken into account.</li>
+
+            <li>The scientific computation takes places concurrently
+              with other activities. In this case, we must separate the
+              energy used by the DG from the energy required to run the
+              other activities.</li>
+          </ul>
+        </p>
+
+        <p>
+          In the first and the second case, the energy consumption and
+          computing efficiency are more easy to define. In the last
+          case, this is less straightforward because we need more
+          detailed info about how the resources are charged between
+          the tasks. It requires a fine-grained monitoring.
+        </p>
+
+        <p>
+          What we have to do is estimate the "DG-Power" requirements
+          and the "DG-Performance" of the machine. The DG-Power is the
+          amount of energy put into the system to run the Desktop Grid
+          applications. Similarly, the DG-Performance is the basically
+          the speed of computation of the DG applications. Once we
+          have these numbers we can compute the Performance-per-Watt =
+          DG-Performance / DG-Power.
+        </p>
+
+        <p>
+          In the case that the machine runs BOINC apps 100% of the
+          time at 100% of the CPU capacity, DG-Performance / DG-Power
+          = Machine-Performance / Machine-Power.  This is true also
+          when the machine runs the computation intermittently, but
+          has all the resources when it does.
+        </p>
+
+        <p>
+          In the third scenario mentioned above (when the machine is
+          simultaneously used for other purposes) we have to split of
+          the energy used for these activities, from the energy used
+          for the computation. In many cases, the other activities
+          (such as the owner doing office work) does not stress the
+          computer very much and its energy consumption is close to a
+          stable minimum energy level. However, when the computation
+          is thrown into the mix, this energy consumption will go up
+          because more resources (CPU, memory) are used. It is this
+          extra energy that we should measure and use to evaluate the
+          power consumption of the Desktop Grid. The energy monitor
+          described in the previous section therefore measures the CPU
+          load of the user and DG applications in combination with the
+          instantaneous power consumption. From this data, we estimate
+          the base-line energy consumption of the machine, and the
+          extra energy consumption, the DG-Energy , due to the
+          computation. We also measure the progress of the running
+          BOINC applications to estimate the DG-Performance.
+        </p>
+
+        <p>
+          We also assume that there are four broad classes of machines
+          that participate in DG: servers, personal desktops,
+          personal laptops, private desktops. We will have to evaluate
+          how they map to the three simple use cases discussed above.
+        </p>
+
+        <p>
+          The analysis of the information gathered by the energy
+          monitor will help us detect stereotypical situations. For
+          each situation we will analyse what the performance per Watt
+          is, and what can be done to decrease the energy
+          requirements. This will lead to a set of profiles that can
+          be used to configure BOINC and the machine.
+        </p>
+
+
+      </div>
+    </div>
+  </body>
+</html>
+
+

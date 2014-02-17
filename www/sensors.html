@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Low-energy BOINC</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <div class="content">
+
+      <div class="header">Low-energy BOINC</div>
+      <div class="menubar">
+        <div class="pagemenu">
+          <div class="menuitem"><a class="pagemenu" href="index.html">About</a></div>
+          <div class="menuitem"><a class="pagemenu" href="monitor.html">Monitor</a></div>
+          <div class="menuitem menuitem_selected">Sensors</div>
+          <div class="menuitem"><a class="pagemenu" href="driver.html">Driver</a></div>
+          <div class="menuitem"><a class="pagemenu" href="analysis.html">Analysis</a></div>
+          <div class="menuitem"><a class="pagemenu" href="info/">Wiki</a></div>
+          <!-- <a class="pagemenu" href="participate.html">Participate</a> -->
+          <div class="menuitem"><a class="pagemenu" href="low-energy-boinc/">Log in</a></div>
+          <div class="line"></div>
+        </div>
+      </div>
+
+      <div class="text">
+
+        <p>
+        </p>
+        
+        <h2>Power consumption</h2>
+
+        <p>
+          For the power consumption we are currently using
+          the <i>WattsUp! Pro</i> meter. The solutions we have looked
+          at include:
+        </p>
+
+        <table>
+          <tr>
+            <td class="option">
+              <img src="wattsup.jpg" class="option" /><br/>
+
+              <h3>WattsUp! Pro</h3>
+              <p>
+                The WattsUp! meter is produced by the company of the
+                same name. The Pro version has a serial-over-usb
+                connection that allows software to obtain the data
+                from the meter.
+              </p>
+
+              <b>Advantages</b><br/>
+              <ul>
+                <li>Serial over USB connection</li>
+                <li>Reliable enough</li>
+                <li>Code for Windows & Linux</li>
+              </ul>
+              <b>Disadvantages</b><br/>
+              <ul>
+                <li>Cost: approx. 120 euros/ $120</li>
+                <li>We already have working code</li>
+              </ul>
+            </td>
+
+            <td class="option">
+              <a href="http://openenergymonitor.org/emon/"><img src="emonTxV2.0_outside.JPG" class="option" /></a><br/>
+              
+              <h3>Open Energy Monitor</h3>
+              <p>
+                <a href="http://openenergymonitor.org/emon/">The Open
+                  Energy Monitor</a> uses
+                a <a href="http://openenergymonitor.org/emon/buildingblocks/ct-sensors-introduction">current
+                  transformer</a>, a clamp to measure the electrical
+                current flowing through the power cables going to the
+                computer.
+              </p>
+
+              <b>Advantages</b><br/>
+              <ul>
+                <li>Open Source / do-it-yourself: we can make them ourselves and contribute to the project</li>
+                <li>Works on Windows & Linux</li>
+                <li>Arduino compatible</li>
+                <li>Community & sustainable energy project</li>
+              </ul>
+              <b>Disadvantages</b><br/>
+              <ul>
+                <li>The accuracy goes down for power consumption below 100W (<a href="http://openenergymonitor.org/emon/emontx/accuracy">see here</a>).</li>
+                <li>Requires to split the electricity cable and wind
+                  one wire around the current transformer (see the brown
+                  wire <a href="http://openenergymonitor.org/emon/sites/default/files/testsetup01.jpg">in
+                    this photo</a>). It's not something everyone will like
+                  to do.</li>
+                <li>Cost: approx. 150 euros + extra soldering work</li>
+              </ul>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <a href="http://www.theowl.com/"><img src="Owl_Micro__New_Product_CM180_Energy_Meter_Monitor_2_3_1.jpg" class="option" /></a><br/>
+              
+              <h3>OWL Intuition-e</h3>
+              <p>
+                <a href="http://openenergymonitor.org/emon/">OWL</a>
+                produces a home energy monitoring solution.
+              </p>
+
+              <b>Advantages</b><br/>
+              <ul>
+                <li>Not too expensive 60 pounds, or 71 euros</li>
+                <li>Phone app</li>
+              </ul>
+              <b>Disadvantages</b><br/>
+              <ul>
+                <li>May have the same accuracy problems as the Open Energy Monitor.</li>
+                <li>Requires to split the electricity cable and wind
+                  one wire around the current transformer.</li>
+                <li>Closed protocols for data upload? (to be verified)</li>
+              </ul>
+            </td>
+            <td>
+            </td>
+          </tr>
+        </table>
+
+        <!-- ========================================================= -->
+
+        <h2>Ambient temperature sensor</h2>
+
+        <p>
+          The ambient temperature sensor is used to get an idea of the
+          room temperature. Temperature sensors are fairly low-cost
+          sensor. However, the difficulty is to find one that is
+          cheap, that plugs into a PC, and that works with Windows and
+          Linux.
+        </p>
+
+        <table>
+          <tr>
+            <td class="option">
+              <img src="New_TEMPer_8.jpg" class="option" /><br/>
+
+              <h3>TEMPer</h3>
+
+              <b>Advantages</b><br/>
+              <ul>
+                <li>Price: 10 euro</li>
+              </ul>
+              <b>Disadvantages</b><br/>
+              <ul>
+                <li>Windows driver installation?</li>
+              </ul>
+            </td>
+
+            <td class="option">
+              <img src="arduino.png" class="option" /><br/>
+              
+              <h3>Arduino + TMP36</h3>
+              <p>
+                <a href="http://arduino.cc">Arduino</a> is the
+                combination of a small development board with an Atmel
+                microcontroller and an easy to use development
+                environment. The <a href="http://learn.adafruit.com/tmp36-temperature-sensor/overview">TMP36</a>
+                sensor is a cheap, analog temperature sensor.
+              </p>
+
+              <b>Advantages</b><br/>
+              <ul>
+                <li>Open Source / do-it-yourself</li>
+                <li>Works on Windows & Linux</li>
+              </ul>
+              <b>Disadvantages</b><br/>
+              <ul>
+                <li>Cost: approx. 35 euros</li>
+              </ul>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="option">
+              <img src="outside-sensor.jpg" class="option" /><br/>
+
+              <h3>USBTemp</h3>
+              
+
+              <p>USBTemp measures the temperature using
+              the <a href="http://datasheets.maximintegrated.com/en/ds/DS18S20.pdf">DS18S20</a>
+              sensor and an ATMega168 micro-controller (used also by
+              the Arduino). It connects via USB to your computer.
+
+                For details, see the following
+pages: <a href="http://gonium.net/md/2009/01/03/usbtemp-continuous-temperature-monitoring/">
+gonium.net</a>
+and <a href="http://gonium.net/md/2009/01/03/usbtemp-continuous-temperature-monitoring/">mikrowerk</a>.</p>
+
+              <b>Advantages</b><br/>
+              <ul>
+                <li>Open Source / do-it-yourself</li>
+              </ul>
+              <b>Disadvantages</b><br/>
+              <ul>
+                <li>do-it-yourself...</li>
+              </ul>
+            </td>
+
+            <td class="option">
+            </td>
+          </tr>
+
+
+        </table>
+
+      </div>
+    </div>
+  </body>
+</html>
+
+

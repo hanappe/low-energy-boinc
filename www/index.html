@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Low-energy BOINC</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <div class="content">
+
+      <div class="header">Low-energy BOINC</div>
+      <div class="menubar">
+        <div class="pagemenu">
+          <div class="menuitem menuitem_selected">About</div>
+          <div class="menuitem"><a class="pagemenu" href="monitor.html">Monitor</a></div>
+          <div class="menuitem"><a class="pagemenu" href="sensors.html">Sensors</a></div>
+          <div class="menuitem"><a class="pagemenu" href="driver.html">Driver</a></div>
+          <div class="menuitem"><a class="pagemenu" href="analysis.html">Analysis</a></div>
+          <div class="menuitem"><a class="pagemenu" href="info/">Wiki</a></div>
+          <!-- <a class="pagemenu" href="participate.html">Participate</a> -->
+          <div class="menuitem"><a class="pagemenu" href="low-energy-boinc/">Log in</a></div>
+          <div class="line"></div>
+        </div>
+      </div>
+
+      <div class="text">
+
+        <p>
+          The Low-Energy BOINC project aims at reducing the overall
+          energy requirements of volunteer computing networks and, in
+          particular, of networks
+          using <a href="http://boinc.berkeley.edu/">BOINC</a>.
+        </p>
+
+        <p>
+          We are particularly interested in the energy reductions that can be
+          obtained using two principles:
+        </p>
+
+        <div class="smallimageright"><img src="low-power-volunteer-computing.jpg" width="320px" /></div>
+        
+        <p>
+          1. run the computation while the user is working on the machine,
+          rather than when the machine is idle for long periods of time,
+        </p>
+
+        <p>
+          2. make sure that the machine stays in a low-energy mode during the
+          computation.
+        </p>
+
+        <p>
+          There are additional criteria that can be taken into account
+          - for example, the ambient temperature (see
+          [<a href="#ref_1">1</a>]). We therefore want to measure more
+          than just energy consumption to create a more complete image
+          of the machine. 
+        </p>
+
+        <p>
+          There are several parts to this project:
+        </p>
+
+        <p>
+          1. Create the tools to monitor the real energy consumption
+          of a wide variety of PCs and servers. This involves a
+          combination of <a href="monitor.html">software</a>
+          and <a href="sensors.html">hardware</a>.</li>
+        </p>
+
+        <p>
+          2. Develop the technology to maintain the machine
+          in <a href="driver.html">the performance state that is most
+          efficient</a> in terms of computation performed per energy
+          consumed.</li>
+        </p>
+
+        <p>
+          3. Gather sufficient data from a wide variety of machines
+          and environments to <a href="analysis.html">model the energy
+          consumption</a> and validate the low-energy approach.</li>
+        </p>
+
+        <h1>Learn more and participate!</h1>
+
+        <p>
+          The low-energy BOINC project is open/free. It is open
+          because the source code is available under the GPL. It is
+          also open because we would like to hear feedback and
+          suggestions from you. If you are interested to participate
+          in the discussions, send us an email at <img style="position: relative; top: 4px" src="contact.png" />.
+        </p>
+
+        <h1>Acknowledgements</h1>
+
+        <div class="smallimageright"><img src="eu.jpeg" width="60px" /></div>
+        <div class="smallimageright"><img src="idgf.png" width="100px" /></div>
+
+        <p>
+          Low-energy BOINC is a project of the Sustainability Group at
+          the <a href="http://www.csl.sony.fr/sustainability.php">Sony
+          Computer Science Laboratory Paris</a>. It is supported by
+          the
+          <a href="http://idgf-sp.eu/">International Desktop Grid
+            Federation - Support Project (IDGF-SP)</a>, EU FP7
+            Capacities Programme, grant agreement nr RI-312297.
+        </p>
+
+
+        <h1>References</h1>
+
+        <a name="ref_1"></a>[1] Bernhard Schott, Ad Emmen:
+        "<a href="http://www.scpe.org/index.php/scpe/article/view/718">Green
+          Desktop-Grids: Scientific Impact, Carbon Footprint, Power Usage
+          Efficiency</a>." Scalable Computing: Practice and Experience
+        01/2011, vol. 12.
+
+      </div>
+    </div>
+  </body>
+</html>
+
+
