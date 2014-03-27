@@ -8,14 +8,14 @@
 
 
 #ifdef _WIN32
-	#include "windows/ArduinoTemp.hpp"
-	#include "windows/BoincUserCpuLoad.hpp"
+	#include "ArduinoTemp.hpp"
+	#include "BoincUserCpuLoad.hpp"
 #else // Unix
-	#include "linux/PStates.hpp"
-	#include "linux/ACPI.hpp"
-	#include "linux/BoincCpuLoad.hpp"
-	#include "linux/UsersCpuLoad.hpp"
-	#include "linux/TEMPer.hpp"
+	#include "PStates.hpp"
+	#include "ACPI.hpp"
+	#include "BoincCpuLoad.hpp"
+	#include "UsersCpuLoad.hpp"
+	#include "TEMPer.hpp"
 #endif
 
 using namespace std;

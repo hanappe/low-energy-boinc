@@ -352,60 +352,6 @@ void Wmi::requestData(const char* WMIClass, LPCWSTR dataName, VARIANT& variant) 
 	
 }
 
-
-/*
-void Wmi::getList(const char* WMIClass, const std::vector<LPCWSTR> & props, std::vector<VARIANT> & results)
-{
-	// Use the IWbemServices pointer to make requests of WMI ----
-	static const bstr_t WQL = bstr_t("WQL");
-	static const bstr_t SELECT_FROM = bstr_t("SELECT * FROM ");
-
-	result = services->ExecQuery(WQL,
-		SELECT_FROM + bstr_t(WMIClass),
-		WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY,
-		NULL,
-		&enumerator
-	);
-
-	if (FAILED(result))
-    {
-        std::cout << "Query for operating system name failed."
-            << " Error code = 0x" 
-            << std::hex << result << std::endl;
-        services->Release();
-        locator->Release();
-        CoUninitialize();
-
-		//TODO return valid error
-
-        return;
-    }
-
-	//Prepare the results array
-	results.clear();
-	results.resize(props.size());
-
-	ULONG uReturn;
-	for(;;) {
-		HRESULT result = enumerator->Next(WBEM_INFINITE, 1, &object, &uReturn);
-		if(0 == uReturn) {
-			break;
-		}
-
-		VARIANT variant;
-
-		for (std::vector<LPCWSTR>::const_iterator i = props.begin(); i != props.end(); ++i) {
-			result = object->Get((*i), 0, &variant, 0, 0);
-			//if (result == WBEM_S_NO_ERROR) {
-				results.push_back(VARIANT(variant));
-			//}
-		}
-
-		return;
-	}
-}
-*/
-
 void Wmi::getMulti(const char* WMIClass, const std::vector<LPCWSTR> & props, std::map<LPCWSTR, std::vector<VARIANT> > & res)
 {
 	// Use the IWbemServices pointer to make requests of WMI ----
@@ -568,6 +514,28 @@ size_t Wmi::getNumCore()
 	i = res.find(L"NumberOfCores");
 	if (i != res.end() ) {
 		num_core = res[L"NumberOfCores"][0].iVal;
+	}
+
+	return num_core;
+}
+
+size_t Wmi::getMaxClockSpeed()
+{
+	size_t num_core = 0;
+	// Fields to select
+	std::vector<LPCWSTR> properties;
+	properties.push_back(L"MaxClockSpeed");
+
+	// Request result
+	std::map<LPCWSTR, std::vector<VARIANT> > res;
+
+	this->requestData(bstr_t("SELECT MaxClockSpeed FROM Win32_Processor"), properties, res);
+	
+	// If the value is 
+	std::map<LPCWSTR, std::vector<VARIANT> >::iterator i;
+	i = res.find(L"MaxClockSpeed");
+	if (i != res.end() ) {
+		num_core = res[L"MaxClockSpeed"][0].iVal;
 	}
 
 	return num_core;

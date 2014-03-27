@@ -73,27 +73,13 @@ struct CpuLoadManager : SensorManager {
                 m_error = 0;
                 m_error_reported = false;
 				
-				std::vector<LPCWSTR> properties;
-				properties.push_back(L"NumberOfCores");
-				properties.push_back(L"MaxClockSpeed");
-				
-				std::map<LPCWSTR, std::vector<VARIANT> > res;
-				Wmi::GetInstance()->getMulti2("Win32_Processor", properties, res);
 
-				std::map<LPCWSTR, std::vector<VARIANT> >::iterator i;
-				i = res.find(L"NumberOfCores");
-				if (i != res.end() ) {
-					m_ncpus = res[L"NumberOfCores"][0].iVal;
-				}
-				
+				m_ncpus = Wmi::GetInstance()->getNumCore();
 				if (m_ncpus <= 0) {
                         m_error = ERROR_BAD_NUMBER_OF_CPUS;
                 }
-				i = res.find(L"MaxClockSpeed");
-				if (i != res.end()) {
-					m_clk_tck = res[L"MaxClockSpeed"][0].iVal;
-				}
 				
+				m_clk_tck = Wmi::GetInstance()->getMaxClockSpeed();
 				if (m_clk_tck <= 0) {
                         m_error = ERROR_BAD_CLK_TCK;
                 }
@@ -132,8 +118,6 @@ struct CpuLoadManager : SensorManager {
                 m_update_time = t;
                 long rounded_t = (t / m_update_period) * m_update_period;
 				
-				//std::cout << "CpuLoadManager::update_sensors time_t: " << t << std::endl;
-
 				const long long load_percentage = Wmi::GetInstance()->getTotalCpuLoad();
 
 				CpuStat stat;
@@ -142,15 +126,10 @@ struct CpuLoadManager : SensorManager {
                 if (m_record_time > 0) {
 						float ratio = load_percentage / 100.0f;
 						if (debug) {
-							std::cout << "CpuLoad: " << load_percentage << " " << ratio << std::endl;
+							std::cout << "CpuLoad: " << ratio << std::endl;
 						}
                         m_machine.m_datapoints.push_back(Datapoint(rounded_t, ratio));
                 }
-				
-				
-				Wmi::GetInstance()->printAllProcess();
-
-
 				m_record_time = t;
                 m_stat = stat;
         }

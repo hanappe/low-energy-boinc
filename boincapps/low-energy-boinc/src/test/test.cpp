@@ -10,21 +10,20 @@
 #include "CpuLoad.hpp"
 #include "LibSensors.hpp"
 
-
 #ifdef _WIN32
 	#include <windows.h>
 
-	#include "windows/ArduinoTemp.hpp"
-	#include "windows/MsAcpi.hpp"
-	#include "windows/BoincUserCpuLoad.hpp"
+	#include "ArduinoTemp.hpp"
+	#include "MsAcpi.hpp"
+	#include "BoincUserCpuLoad.hpp"
 
 #else // Unix
 	#include <unistd.h>
 
-	#include "linux/PStates.hpp"
-	#include "linux/ACPI.hpp"
-	#include "linux/BoincCpuLoad.hpp"
-	#include "linux/UsersCpuLoad.hpp"
+	#include "PStates.hpp"
+	#include "ACPI.hpp"
+	#include "BoincCpuLoad.hpp"
+	#include "UsersCpuLoad.hpp"
 #endif
 
 
@@ -49,6 +48,7 @@ int main(int argc, char** argv) {
 
 		Sensors::add_sensor_manager(getWattsupManager());
 		Sensors::add_sensor_manager(getLibSensorsManager());
+		Sensors::add_sensor_manager(getCpuLoadManager());
 
 		#ifdef _WIN32
 			Sensors::add_sensor_manager(getBoincUserCpuLoadManager());
@@ -64,8 +64,9 @@ int main(int argc, char** argv) {
 			Sensors::add_sensor_manager(getTEMPerManager());
 			Sensors::add_sensor_manager(getPStatesManager());
 			Sensors::add_sensor_manager(getBoincSensorsManager());
-			Sensors::add_sensor_manager(getCpuLoadManager());
+
 			Sensors::add_sensor_manager(getBoincCpuLoadManager());
+			Sensors::add_sensor_manager(getUsersCpuLoadManager());
 			Sensors::add_sensor_manager(getACPIManager());
 
 		#endif

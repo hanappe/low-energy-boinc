@@ -57,6 +57,8 @@ public:
 	// Specific Function
 	
 	size_t getNumCore(); // Get number of core through WMI query
+	size_t getMaxClockSpeed(); // Get max clock speed of cpu [TODO]
+
 	long long getTotalCpuLoad();
 	long long getEachCpuLoad(); //WIP, not really implemented
 	long long getBoincProcessId(); //Get the process id of "boin.exe", 0 if doesn't exist.
