@@ -16,6 +16,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "boinc", "..\..\boinc\win_bu
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "serial_static", "serial_static.vcxproj", "{E9CC6A20-9096-4EF0-BB7A-BC86919CB02A}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "serial_arduino", "serial_arduino.vcxproj", "{95C504E4-A4C8-4E97-9D3E-A115827FF53A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -46,6 +48,10 @@ Global
 		{E9CC6A20-9096-4EF0-BB7A-BC86919CB02A}.Debug|Win32.Build.0 = Debug|Win32
 		{E9CC6A20-9096-4EF0-BB7A-BC86919CB02A}.Release|Win32.ActiveCfg = Release|Win32
 		{E9CC6A20-9096-4EF0-BB7A-BC86919CB02A}.Release|Win32.Build.0 = Release|Win32
+		{95C504E4-A4C8-4E97-9D3E-A115827FF53A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{95C504E4-A4C8-4E97-9D3E-A115827FF53A}.Debug|Win32.Build.0 = Debug|Win32
+		{95C504E4-A4C8-4E97-9D3E-A115827FF53A}.Release|Win32.ActiveCfg = Release|Win32
+		{95C504E4-A4C8-4E97-9D3E-A115827FF53A}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

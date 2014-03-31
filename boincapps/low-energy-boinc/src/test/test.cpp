@@ -46,13 +46,13 @@ void my_sleep(unsigned long milliseconds) {
 
 int main(int argc, char** argv) {
 
-		Sensors::add_sensor_manager(getWattsupManager());
-		Sensors::add_sensor_manager(getLibSensorsManager());
-		Sensors::add_sensor_manager(getCpuLoadManager());
+		//Sensors::add_sensor_manager(getWattsupManager());
+		//Sensors::add_sensor_manager(getLibSensorsManager());
+		//Sensors::add_sensor_manager(getCpuLoadManager());
 
 		#ifdef _WIN32
-			Sensors::add_sensor_manager(getBoincUserCpuLoadManager());
-			//Sensors::add_sensor_manager(getArduinoTempManager());
+			//Sensors::add_sensor_manager(getBoincUserCpuLoadManager());
+			Sensors::add_sensor_manager(getArduinoTempManager());
 			//Sensors::add_sensor_manager(getMsAcpiManager());
 		#else // Unix
 			signal(SIGINT, signal_handler);

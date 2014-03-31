@@ -10,7 +10,7 @@
 
 using namespace std;
 
-static const bool debug = false;
+static const bool debug = true;
 
 static const string ERRORS[] = {
 #define ERROR_NO_ERROR 0
@@ -185,7 +185,7 @@ struct WattsupSensor : Sensor {
         }
 
         void open() {
-				//std::cout << "WattsupSensor::open" << std::endl;
+				std::cout << "WattsupSensor::open" << std::endl;
                 if (is_open()) return;
 
                 m_buf_len = 0;
@@ -193,13 +193,51 @@ struct WattsupSensor : Sensor {
 				
 				m_serial.setPort(m_device);
 				m_serial.setBaudrate(115200);
+				//serial::Timeout t(1000, 1000);
+				//m_serial.setTimeout(t);
 				m_serial.open();
 
-				if (!m_serial.isOpen()) {
-                        close();
-                        return;
-                }
+				if (m_serial.isOpen() && identify()) {
+					// Wattsup is identify
+					std::cout << "WattsupSensor::open end success ?" << std::endl;
+				} else {
+					m_serial.close();
+                    close();
+					std::cout << "WattsupSensor:: close A" << std::endl;
+                    return;
+				}
+
+				
         }
+
+		// Send 
+
+		bool identify() {
+			
+			WattsupCommand cmd;
+			WattsupCommand::SetupVersionRequestion(cmd);
+
+			time_t t = Datapoint::get_current_time();
+            write(cmd.m_p);
+            cmd.m_write_time = t;
+
+			Packet p;
+
+			// Waiting for the reply 'v'
+
+			while (!read(p) || p.m_cmd != cmd.m_wait_reply) {
+					t = Datapoint::get_current_time();
+					
+                    if (t > cmd.m_write_time + 5) {
+                            // Reply timed out.
+                            close();
+                            return false;
+                    }
+					Sleep(16);
+            }
+
+			return true;
+		}
 
         bool is_open() {
 				return m_serial.isOpen();

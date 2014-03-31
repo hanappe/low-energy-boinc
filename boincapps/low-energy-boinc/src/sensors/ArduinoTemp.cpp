@@ -54,14 +54,13 @@ private:
 	}
 };
 
-const ArduinoPacket ArduinoPacket::sm_id_question = ArduinoPacket::CreateCommad(std::string("?")); // '?'
-const ArduinoPacket ArduinoPacket::sm_id_answer = ArduinoPacket::CreateCommad(std::string("A"));; // 'A'
+const ArduinoPacket ArduinoPacket::sm_id_question = ArduinoPacket::CreateCommad(std::string("?")); // Complete Command is "?\0"
+const ArduinoPacket ArduinoPacket::sm_id_answer = ArduinoPacket::CreateCommad(std::string("A"));; // Complete Command is "A\0"
 
-const ArduinoPacket ArduinoPacket::sm_temp_question = ArduinoPacket::CreateCommad(std::string("T"));;
+const ArduinoPacket ArduinoPacket::sm_temp_question = ArduinoPacket::CreateCommad(std::string("T"));; // Complete Command is "T\0"
 //ArduinoPacket ArduinoPacket::sm_temp_answer = ArduinoPacket::CreateCommad(std::string("?"));;
 
 struct ArduinoTempSensor : Sensor {
-
 
 		enum Flag {
 			Undefine,
@@ -76,18 +75,17 @@ struct ArduinoTempSensor : Sensor {
 		Flag m_flag;
 
 		 ArduinoTempSensor(std::string& port) {
-			//cout <<  "ArduinoTempSensor" << endl;
-			m_description = "Get (external) temperature from Arduino device";
+				//cout <<  "ArduinoTempSensor" << endl;
+				m_description = "Get (external) temperature from Arduino device";
 			
-			m_port = port;	
-			m_closing = false;
-			m_flag = Undefine;
+				m_port = port;	
+				m_closing = false;
+				m_flag = Undefine;
 
-
-			open();
-			if (is_open()) {
-				identify();
-			}
+				open();
+				if (is_open()) {
+					identify();
+				}
         }
 
         ~ArduinoTempSensor(){
@@ -97,17 +95,21 @@ struct ArduinoTempSensor : Sensor {
 		}
 
 		void identify() {
-			if (m_flag == Undefine) {
+				std::cout << "identify" << std::endl;
+				if (m_flag == Undefine) {
 				
-				// Questions device
-				sendPacket( ArduinoPacket::sm_id_question );
+						// Questions device
+						std::cout << "Send Question" << std::endl;
+						sendPacket( ArduinoPacket::sm_id_question );
 
-				// Get the answer
-				ArduinoPacket p;
-				readPacket(p);
-
-				m_flag = (p == ArduinoPacket:: sm_id_answer) ? Arduino : NoArduino;
-			}
+						std::cout << "Get Answer" << std::endl;
+						// Get the answer
+						ArduinoPacket p;
+						readPacket(p);
+				
+						m_flag = (p == ArduinoPacket:: sm_id_answer) ? Arduino : NoArduino;
+				}
+				std::cout << "end identify" << std::endl;
 		}
 
 		bool is_arduino() const {
@@ -115,12 +117,17 @@ struct ArduinoTempSensor : Sensor {
 		}
 
 		void open() {
-        
-                if (is_open()) return;              
+
+				//std::cout << "Arduino open ?" << std::endl;
+			if (is_open()) {
+				return;
+			}              
 				
 				m_serial.setPort(m_port);
 				m_serial.setBaudrate(9600);
-				m_serial.setTimeout(serial::Timeout());
+				serial::Timeout t(1000, 1000);
+				m_serial.setTimeout(t);
+				//m_serial.setTimeout(serial::Timeout(11111));
 				m_serial.setBytesize(serial::eightbits);
 				m_serial.setParity(serial::parity_none);
 				m_serial.setStopbits(serial::stopbits_one);
@@ -128,10 +135,11 @@ struct ArduinoTempSensor : Sensor {
 				m_serial.open();
 
 				if (!m_serial.isOpen()) {
-                        close();
+                        m_serial.close();
+						close();
                         return;
                 }
-        }
+		}
 
         bool is_open() {
 				return m_serial.isOpen();
@@ -195,7 +203,8 @@ struct ArduinoTempSensor : Sensor {
 				// Get the answer
 				float f;
 				readFloat(f);
-				std::cout << "Temperature: " << f <<std::endl;
+				std::cout << "External temperature: " << f << std::endl;
+
 			}
 		}
 
@@ -238,21 +247,21 @@ struct ArduinoTempManager : SensorManager {
 		ArduinoTempSensor* get_arduino_sensor() {
 
 			ArduinoTempSensor* result = 0;
-
 			for (int i = 0; i <= 32; ++i)
+
 			{
                     ostringstream ss;
 					ss << ((i < 10) ? PORT_PREFIX_A : PORT_PREFIX_B) << i;
 
                     ArduinoTempSensor* device_sensor = new ArduinoTempSensor(ss.str());
-                        
+                       //std::cout << "Port test: " << ss.str() << std::endl;
 					if (device_sensor->is_open() && device_sensor->is_arduino()) {
-						std::cout << "Arduino FOUND!: " << ss.str()<< std::endl;
+						std::cout << "Arduino FOUND A!: " << ss.str()<< std::endl;
                         result =  device_sensor;
                     } else {
 						delete device_sensor;
 					}
-            }	
+            }
 
 			if (debug && !result) {
 				std::cout << "Arduino Not found.... " << result <<std::endl;
@@ -260,8 +269,6 @@ struct ArduinoTempManager : SensorManager {
 
 			return result;
 		}
-
-		
 
         void add_sensors(SensorV& sensors, ErrorV& errors) {
                 if (m_error) {
@@ -277,8 +284,6 @@ struct ArduinoTempManager : SensorManager {
 				}
 
         }
-
-
 
         void update_sensors() {
                 if (m_error) return;
