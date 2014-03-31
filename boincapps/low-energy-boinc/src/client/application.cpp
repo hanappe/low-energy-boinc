@@ -6,7 +6,7 @@
 #include "boinc_api.h"
 #include "filesys.h"
 #include "util.h"
-#include "sensors/Sensors.hpp"
+#include "Sensors.hpp"
 
 using namespace std;
 

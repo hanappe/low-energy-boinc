@@ -81,13 +81,13 @@ struct TEMPerSensor : Sensor {
         char m_read[8];
 
         TEMPerSensor(struct usb_device* dev) {
-				cout << "TEMPerSensor()" << endl;
+                cout << "TEMPerSensor()" << endl;
                 m_name = "TEMPer";
                 m_description = "Temperature sensor";
                 m_dev = dev;
                 m_h = 0;
                 open();
-				cout << "TEMPerSensor() End" << endl;
+                cout << "TEMPerSensor() End" << endl;
         }
 
         ~TEMPerSensor() {
@@ -187,7 +187,6 @@ struct TEMPerManager : SensorManager {
         time_t m_update_time;
 
         TEMPerManager() {
-				cout << "TEMPerManager()" << endl;
                 m_name = "TEMPerManager";
                 m_error = 0;
                 m_error_reported = false;
@@ -196,7 +195,6 @@ struct TEMPerManager : SensorManager {
                 m_update_period = 900; // 15 minutes
                 m_update_time = 0;
                 usb_init();
-				cout << "TEMPerManager() End" << endl;
         }
 
         ~TEMPerManager() {
@@ -218,18 +216,14 @@ struct TEMPerManager : SensorManager {
                         return;
                 }
 
-				cout << "find_tempers" << endl;          
                 usb_find_busses();
                 usb_find_devices();
 
-                for (struct usb_bus* bus = usb_get_busses(); bus != 0; bus = bus->next) {
-						cout << "find_tempers test A" << endl;  
+                for (struct usb_bus* bus = usb_get_busses(); bus != 0; bus = bus->next) {  
                         for (struct usb_device* dev = bus->devices; dev != 0; dev = dev->next) {
-                            cout << "find_tempers test B" << endl;     
-							if (!TEMPerSensor::check_vendor_and_product(dev)) continue;
-
+                                if (!TEMPerSensor::check_vendor_and_product(dev)) continue;
+                                
                                 TEMPerSensor* temper = new TEMPerSensor(dev);
-								cout << "find_tempers test C" << endl;    
                                 if (!temper->is_open()) {
                                         delete temper;
                                         continue;
@@ -261,13 +255,13 @@ struct TEMPerManager : SensorManager {
         }
 
         void update_sensors() {
-				cout << "TEMPerManager::() update_sensors" << endl;
+                //cout << "TEMPerManager::() update_sensors" << endl;
                 time_t t = Datapoint::get_current_time();
                 if (t < m_update_time + m_update_period) return;
                 m_update_time = t;
                 long rounded_t = (t / m_update_period) * m_update_period;
-
-
+                
+                
                 if (m_temper == 0) {
                         find_tempers();
                         if (m_temper == 0) return;

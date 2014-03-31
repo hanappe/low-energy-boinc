@@ -1,8 +1,8 @@
 #ifndef ARDUINOTEMP_H
 #define ARDUINOTEMP_H
 
-#include "../SensorManager.hpp"
+#include "SensorManager.hpp"
 
 extern SensorManager* getArduinoTempManager();
 
-#endif // __MSACPI_hpp__
+#endif // ARDUINOTEMP_H

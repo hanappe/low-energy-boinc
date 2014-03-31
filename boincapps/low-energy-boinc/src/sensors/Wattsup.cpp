@@ -4,9 +4,7 @@
 #include <sstream>
 #include <vector>
 #include <deque>
-
-#include "serial.h"
-
+#include <cstring>
 
 using namespace std;
 
@@ -23,20 +21,20 @@ struct Packet {
         static const size_t buf_len = 512;
         static const size_t num_fields = 18;
 
-		char m_cmd;
-		char m_sub_cmd;
-
-		char m_buf[buf_len];
-		int m_len;
-
-		char* m_fields[num_fields];
-		int m_count;
+        char m_cmd;
+        char m_sub_cmd;
+        
+        char m_buf[buf_len];
+        int m_len;
+        
+        char* m_fields[num_fields];
+        int m_count;
 
         Packet() {
                 m_cmd = m_sub_cmd = 0;
                 m_len = m_count = 0;
-				memset(m_buf, 0, buf_len);
-				memset(m_fields, 0, num_fields);
+                std::memset(m_buf, 0, buf_len);
+                std::memset(m_fields, 0, num_fields);
         }
 }; // end class Packet
 
@@ -51,16 +49,16 @@ struct WattsupCommand {
         }
 
 		// Version request
-		static void SetupVersionRequestion(WattsupCommand & c) {
-			    c.m_p.m_cmd = 'V';
+        static void SetupVersionRequestion(WattsupCommand & c) {
+                c.m_p.m_cmd = 'V';
                 c.m_p.m_sub_cmd = 'R';
                 c.m_p.m_count = 0;
                 c.m_wait_reply = 'v';
-		}
+        }
 
-		// Request fields
-		static void SetupRequestField(WattsupCommand & c) {
-				c.m_p.m_cmd = 'C';
+        // Request fields
+        static void SetupRequestField(WattsupCommand & c) {
+                c.m_p.m_cmd = 'C';
                 c.m_p.m_sub_cmd = 'W';
                 c.m_p.m_count = 18;
                 c.m_p.m_fields[0] = (char*) "1"; // watts
@@ -85,31 +83,31 @@ struct WattsupCommand {
 		}
 
 		// Memory full handling
-		static void SetupMemoryFullHandeling(WattsupCommand & c) {
-				c.m_p.m_cmd = 'O';
-				c.m_p.m_sub_cmd = 'W';
-				c.m_p.m_count = 1;
-				c.m_p.m_fields[0] = (char*) "1";
-		}
-
-		// External logging 1s
-		static void SetupExternalLogging1s(WattsupCommand & c) {
-			    c.m_p.m_cmd = 'L';
+        static void SetupMemoryFullHandeling(WattsupCommand & c) {
+                c.m_p.m_cmd = 'O';
+                c.m_p.m_sub_cmd = 'W';
+                c.m_p.m_count = 1;
+                c.m_p.m_fields[0] = (char*) "1";
+        }
+        
+        // External logging 1s
+        static void SetupExternalLogging1s(WattsupCommand & c) {
+                c.m_p.m_cmd = 'L';
                 c.m_p.m_sub_cmd = 'W';
                 c.m_p.m_count = 3;
                 c.m_p.m_fields[0] = (char*) "E";
                 c.m_p.m_fields[1] = (char*) "";
                 c.m_p.m_fields[2] = (char*) "1";
-		}
-		// Internal logging 600s
-		static void SetupInternalLogging600s(Packet & p) {
-			    p.m_cmd = 'L';
-				p.m_sub_cmd = 'W';
-				p.m_count = 3;
-				p.m_fields[0] = (char*) "I";
-				p.m_fields[1] = (char*) "";
-				p.m_fields[2] = (char*) "600";
-		}
+        }
+        // Internal logging 600s
+        static void SetupInternalLogging600s(Packet & p) {
+                p.m_cmd = 'L';
+                p.m_sub_cmd = 'W';
+                p.m_count = 3;
+                p.m_fields[0] = (char*) "I";
+                p.m_fields[1] = (char*) "";
+                p.m_fields[2] = (char*) "600";
+        }
 }; // end class WattsupCommand
 
 typedef deque<WattsupCommand> CommandQ;
@@ -117,6 +115,8 @@ typedef deque<WattsupCommand> CommandQ;
 #ifdef _WIN32
 
 #include <windows.h>
+
+#include "serial.h"
 
 #define PORT_PREFIX "\\\\.\\COM"
 
