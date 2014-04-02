@@ -6,11 +6,8 @@
 
 #include "serial.h"
 
-static const bool debug = true;
-
-using namespace std;
-
 #ifdef _WIN32
+
 #include <windows.h>
 	#define PORT_PREFIX_A "COM"
 	#define PORT_PREFIX_B "\\\\.\\COM"
@@ -19,6 +16,9 @@ using namespace std;
 	#define PORT_PREFIX_B "/dev/ttyUSB"
 #endif
 
+static const bool debug = true;
+
+using namespace std;
 
 // An arduino packet in an array of unsigned char, the last char have to be '\0'
 class ArduinoPacket : public std::vector<unsigned char> {
@@ -139,7 +139,7 @@ struct ArduinoTempSensor : Sensor {
 		}
 
         bool is_open() {
-				return m_serial.isOpen();
+                return m_serial.isOpen();
         }
 
         void close() {
@@ -147,65 +147,63 @@ struct ArduinoTempSensor : Sensor {
                 if (m_closing) return;
                 m_closing = true;
 
-				if (m_serial.isOpen()) {
-					m_serial.close();
+                if (m_serial.isOpen()) {
+                        m_serial.close();
                 }	 
-
+                
                 m_closing = false;
         }
 
-		void sendPacket(const ArduinoPacket& p) {
-			m_serial.write(p.data(), p.size());
-		}
-
+        void sendPacket(const ArduinoPacket& p) {
+                m_serial.write(p.data(), p.size());
+        }
+        
 		//Read string answer
-		void readPacket(ArduinoPacket& p) {
+        void readPacket(ArduinoPacket& p) {
 
-			//ostringstream ss;
-			unsigned char c = 1;
-			int i = 0;
+                //ostringstream ss;
+                unsigned char c = 1;
+                int i = 0;
+                
+                p.clear();
+                
+                while(m_serial.read(&c, 1) > 0) {
+                        if (debug)
+                                std::cout << "c: " << (int)c << " : " << c <<  std::endl;
+                        p << c;
+                        
+                        if (c == '\0') {
+                                break;
+                        }
+                }
+        }
 
-			p.clear();
-
-			while(m_serial.read(&c, 1) > 0) {
-				if (debug)
-					std::cout << "c: " << (int)c << " : " << c <<  std::endl;
-				p << c;
-
-				if (c == '\0') {
-					break;
-				}
-			}
-		}
-
-		void readFloat(float & f) {
-			unsigned char data[5] = {0};
-			m_serial.read(&data[0], 5);
-
-			if (debug) {
-				std::cout << "readFloat: " << (int)data[0] << ":" << (int)data[1] << ":" << (int)data[2] << ":" << (int)data[3] << std::endl;
-			}
-
-			if (data[4] == '\0') {
-				f = *(reinterpret_cast<const float*>(&data[0]));
-			}
-		}
-
+        void readFloat(float & f) {
+                unsigned char data[5] = {0};
+                m_serial.read(&data[0], 5);
+                
+                if (debug) {
+                        std::cout << "readFloat: " << (int)data[0] << ":" << (int)data[1] << ":" << (int)data[2] << ":" << (int)data[3] << std::endl;
+                }
+                
+                if (data[4] == '\0') {
+                        f = *(reinterpret_cast<const float*>(&data[0]));
+                }
+        }
+        
         virtual void update(time_t t) {
-			if (is_arduino()) {
+                if (is_arduino()) {
+                        
+                        // Questions device
+                        sendPacket( ArduinoPacket::sm_temp_question );
 
-				// Questions device
-				sendPacket( ArduinoPacket::sm_temp_question );
-
-				// Get the answer
-				float f;
-				readFloat(f);
-				std::cout << "External temperature: " << f << std::endl;
-
-			}
-		}
-
-		
+                        // Get the answer
+                        float f;
+                        readFloat(f);
+                        std::cout << "External temperature: " << f << std::endl;
+                        
+                }
+        }	
 };
 
 static const string ERRORS[] = {
@@ -216,7 +214,7 @@ static const string ERRORS[] = {
 };
 
 struct ArduinoTempManager : SensorManager {
-
+        
         int m_error;
         bool m_error_reported;
         int m_update_period; // Second
@@ -234,39 +232,38 @@ struct ArduinoTempManager : SensorManager {
 
         ~ArduinoTempManager() {
                 if (m_error) return;
-
-				if (m_arduino_temp_sensor) {
-					delete m_arduino_temp_sensor;
-					m_arduino_temp_sensor = 0;
-				}
+                
+                if (m_arduino_temp_sensor) {
+                        delete m_arduino_temp_sensor;
+                        m_arduino_temp_sensor = 0;
+                }
         }
-
-		ArduinoTempSensor* get_arduino_sensor() {
-
-			ArduinoTempSensor* result = 0;
-			for (int i = 0; i <= 32; ++i)
-
-			{
-                    ostringstream ss;
-					ss << ((i < 10) ? PORT_PREFIX_A : PORT_PREFIX_B) << i;
-
-                    ArduinoTempSensor* device_sensor = new ArduinoTempSensor(ss.str());
-                       //std::cout << "Port test: " << ss.str() << std::endl;
-					if (device_sensor->is_open() && device_sensor->is_arduino()) {
-						std::cout << "Arduino FOUND A!: " << ss.str()<< std::endl;
-                        result =  device_sensor;
-                    } else {
-						delete device_sensor;
-					}
-            }
-
-			if (debug && !result) {
-				std::cout << "Arduino Not found.... " << result <<std::endl;
-			}
-
-			return result;
-		}
-
+        
+        ArduinoTempSensor* get_arduino_sensor() {
+                
+                ArduinoTempSensor* result = 0;
+                for (int i = 0; i <= 32; ++i)
+                {
+                        ostringstream ss;
+                        ss << ((i < 10) ? PORT_PREFIX_A : PORT_PREFIX_B) << i;
+                        
+                        ArduinoTempSensor* device_sensor = new ArduinoTempSensor(ss.str());
+                        //std::cout << "Port test: " << ss.str() << std::endl;
+                        if (device_sensor->is_open() && device_sensor->is_arduino()) {
+                                std::cout << "Arduino FOUND A!: " << ss.str()<< std::endl;
+                                result =  device_sensor;
+                        } else {
+                                delete device_sensor;
+                        }
+                }
+                
+                if (debug && !result) {
+                        std::cout << "Arduino Not found.... " << result <<std::endl;
+                }
+                
+                return result;
+        }
+        
         void add_sensors(SensorV& sensors, ErrorV& errors) {
                 if (m_error) {
                         if (!m_error_reported) {
@@ -275,32 +272,34 @@ struct ArduinoTempManager : SensorManager {
                         }
                         return;
                 }
-
-				if (m_arduino_temp_sensor) {
-					sensors.push_back(m_arduino_temp_sensor);
-				}
-
+                
+                if (m_arduino_temp_sensor) {
+                        sensors.push_back(m_arduino_temp_sensor);
+                }
+                
         }
-
+        
         void update_sensors() {
                 if (m_error) return;
-
+                
                 time_t t = Datapoint::get_current_time();
                 if (t < m_time + m_update_period) return;
                 m_time = t;
 
                 long rounded_t = (t / m_update_period) * m_update_period;
+		
 				
-				
-				if (!m_arduino_temp_sensor) {
-					m_arduino_temp_sensor = get_arduino_sensor();
-				}
-				
-				if (m_arduino_temp_sensor) {
-					m_arduino_temp_sensor->update(rounded_t);
-				}
+                if (!m_arduino_temp_sensor) {
+                        m_arduino_temp_sensor = get_arduino_sensor();
+                }
+		
+                if (m_arduino_temp_sensor) {
+                        m_arduino_temp_sensor->update(rounded_t);
+                }
         }
 };
+
+
 
 static ArduinoTempManager manager;
 

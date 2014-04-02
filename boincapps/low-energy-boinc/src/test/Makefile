@@ -12,15 +12,18 @@ CXXFLAGS = -g -Wall -std=c++0x
 BOINC_DIR = ../../../../boinc
 
 CXXFLAGS += -I$(BOINC_DIR) \
- -I$(BOINC_DIR)/api \
- -I$(BOINC_DIR)/lib \
- -I./../sensors
+	-I$(BOINC_DIR)/api \
+	-I$(BOINC_DIR)/lib \
+	-I./../sensors
+#depends include path
+#CXXFLAGS += -I./../../depends/serial
+
+#CXXFLAGS += -I$(wildcard ./../../depends/serial/*)
 
 LDFLAGS = -L$(BOINC_DIR)/api \
 	-L$(BOINC_DIR)/lib \
-	-L.
+	-L. \
 
-SENSORS_PATH = ../sensors
 
 sensors_srcs = $(addprefix ../sensors/, /Sensors.cpp \
 	ACPI.cpp \
@@ -37,6 +40,12 @@ sensors_srcs = $(addprefix ../sensors/, /Sensors.cpp \
 	TEMPer.cpp \
 	UsersCpuLoad.cpp \
 	Wattsup.cpp)
+
+#sensors_srcs += 	$(addprefix ../sensors/, ArduinoTemp.cpp)
+
+#depends_srcs += $(wildcard ../../depends/serial/*.cpp)
+#depends_srcs += $(wildcard ../../depends/serial/*.cc)
+
 
 test_srcs = test.cpp $(sensors_srcs)
 test_deps = ${test_srcs:%.cpp=%.d}

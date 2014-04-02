@@ -8,7 +8,6 @@
 #include "util.h"
 #include "Sensors.hpp"
 
-
 #ifdef _WIN32
 
 #else // Unix
