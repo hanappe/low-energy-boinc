@@ -8,7 +8,7 @@
 
 
 #ifdef _WIN32
-	#include "ArduinoTemp.hpp"
+	//#include "ArduinoTemp.hpp"
 	#include "BoincUserCpuLoad.hpp"
 #else // Unix
 	#include "PStates.hpp"
@@ -26,13 +26,13 @@ static vector<SensorManager*> managers;
 void Sensors::update() {
         if (managers.size() == 0) {
 
-				managers.push_back(getWattsupManager());
+				//managers.push_back(getWattsupManager());
 				managers.push_back(getBoincSensorsManager());
-                managers.push_back(getCpuLoadManager());
-                managers.push_back(getLibSensorsManager());
+				managers.push_back(getCpuLoadManager());
+				managers.push_back(getLibSensorsManager());
 
 				#ifdef _WIN32
-					managers.push_back(getArduinoTempManager());
+					//managers.push_back(getArduinoTempManager());
 					managers.push_back(getBoincUserCpuLoadManager());
 				#else // Unix
 					managers.push_back(getBoincCpuLoadManager());
@@ -40,11 +40,7 @@ void Sensors::update() {
 					managers.push_back(getTEMPerManager());
 					managers.push_back(getPStatesManager());
 					managers.push_back(getACPIManager());
-				#endif
-                
-                
-
-                
+				#endif   
         }
 
         size_t nmanagers = managers.size();

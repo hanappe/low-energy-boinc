@@ -7,7 +7,7 @@
 #include <comdef.h>
 #include <WbemIdl.h>
 
-//#pragma comment(lib, "wbemuuid.lib")
+#pragma comment(lib, "wbemuuid.lib")
 
 class Wmi {
 

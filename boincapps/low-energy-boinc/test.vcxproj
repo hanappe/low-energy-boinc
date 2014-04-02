@@ -66,64 +66,63 @@
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <AdditionalIncludeDirectories>.;../../boinc/;../../boinc/api;../../boinc/lib;../../boinc/samples/image_libs;../../boinc/samples/jpeglib;../../boinc/samples/glut;../../boinc/coprocs/OpenCL/include;./depends;./depends/serial;./depends/libusb/libusb;./src/sensors;./src/sensors/windows</AdditionalIncludeDirectories>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_MT;_DLL;_WINDOWS;_CONSOLE;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_MT;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <FavorSizeOrSpeed>
+      </FavorSizeOrSpeed>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <CompileAs>Default</CompileAs>
+      <ForcedIncludeFiles>boinc_win.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <StringPooling>
+      </StringPooling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>kernel32.lib;user32.lib;advapi32.lib;wsock32.lib;wininet.lib;winmm.lib;MSVCRT.LIB;MSVCPRT.LIB;oldnames.lib;userenv.lib;wbemuuid.lib;comsuppw.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>.\usb\lib\msvc;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <PreventDllBinding>false</PreventDllBinding>
-      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <AdditionalDependencies>libcmt.lib;libcpmt.lib;kernel32.lib;user32.lib;gdi32.lib;opengl32.lib;psapi.lib;glu32.lib;ole32.lib;psapi.lib;wbemuuid.lib;comsuppw.lib;wsock32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>
+      </AdditionalLibraryDirectories>
+      <PreventDllBinding>
+      </PreventDllBinding>
+      <IgnoreSpecificDefaultLibraries>
+      </IgnoreSpecificDefaultLibraries>
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
+      <DelayLoadDLLs>%(DelayLoadDLLs)</DelayLoadDLLs>
+      <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\boinc\lib\gui_rpc_client.cpp" />
-    <ClCompile Include="..\..\boinc\lib\gui_rpc_client_ops.cpp" />
-    <ClCompile Include="..\..\boinc\lib\gui_rpc_client_print.cpp" />
-    <ClCompile Include="src\sensors\ArduinoTemp.cpp" />
-    <ClCompile Include="src\sensors\BoincCpuLoad.cpp" />
     <ClCompile Include="src\sensors\BoincSensors.cpp" />
     <ClCompile Include="src\sensors\BoincUserCpuLoad.cpp" />
     <ClCompile Include="src\sensors\CpuLoad.cpp" />
     <ClCompile Include="src\sensors\Datapoint.cpp" />
     <ClCompile Include="src\sensors\Error.cpp" />
-    <ClCompile Include="src\sensors\FDSet.cpp" />
     <ClCompile Include="src\sensors\LibSensors.cpp" />
     <ClCompile Include="src\sensors\Sensor.cpp" />
     <ClCompile Include="src\sensors\SensorManager.cpp" />
     <ClCompile Include="src\sensors\Sensors.cpp" />
-    <ClCompile Include="src\sensors\TEMPer.cpp" />
     <ClCompile Include="src\sensors\Wattsup.cpp" />
-    <ClCompile Include="src\sensors\Wmi.cpp" />
+    <ClCompile Include="src\sensors\Wmi.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="src\test\test.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\sensors\ArduinoTemp.hpp" />
-    <ClInclude Include="src\sensors\BoincCpuLoad.hpp" />
     <ClInclude Include="src\sensors\BoincSensors.hpp" />
     <ClInclude Include="src\sensors\BoincUserCpuLoad.hpp" />
     <ClInclude Include="src\sensors\CpuLoad.hpp" />
     <ClInclude Include="src\sensors\Datapoint.hpp" />
     <ClInclude Include="src\sensors\Error.hpp" />
-    <ClInclude Include="src\sensors\FDSet.hpp" />
     <ClInclude Include="src\sensors\LibSensors.hpp" />
     <ClInclude Include="src\sensors\Sensor.hpp" />
     <ClInclude Include="src\sensors\SensorManager.hpp" />
     <ClInclude Include="src\sensors\Sensors.hpp" />
-    <ClInclude Include="src\sensors\TEMPer.hpp" />
     <ClInclude Include="src\sensors\Wattsup.hpp" />
     <ClInclude Include="src\sensors\Wmi.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\boinc\win_build\boinc_cli.vcxproj">
-      <Project>{c04f0fcc-bb5d-4627-8656-6173b28bd69e}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\..\boinc\win_build\libboinc.vcxproj">
-      <Project>{e8f6bd7e-461a-4733-b7d8-37b09a099ed8}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\..\boinc\win_build\libboincapi_staticcrt.vcxproj">
       <Project>{07bda8f7-4aaf-4a3b-b96e-ea72a143c5ae}</Project>
     </ProjectReference>

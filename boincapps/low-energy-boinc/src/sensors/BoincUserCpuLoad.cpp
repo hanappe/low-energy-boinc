@@ -8,7 +8,7 @@
 
 using namespace std;
 
-static const bool debug = true;
+static const bool debug = false;
 
 static const string ERRORS[] = {
 #define ERROR_NO_ERROR 0
@@ -24,8 +24,6 @@ static const string ERRORS[] = {
 #define ERROR_BAD_NUMBER_OF_CPUS 5
         "bad number of cpus",
 };
-
-
 
 #ifdef _WIN32
 
@@ -98,8 +96,8 @@ struct BoincUserCpuLoadManager : SensorManager {
 						m_boinc_sensor.m_datapoints.push_back(Datapoint(rounded_t, boinc_cpu_load_ratio));
 						m_user_sensor.m_datapoints.push_back(Datapoint(rounded_t, user_cpu_load_ratio));
 						if (debug) {
-								std::cout << "BOINC CPU LOAD: " << boinc_cpu_load_ratio << std::endl;
-								std::cout << "USER CPU LOAD: " << user_cpu_load_ratio << std::endl;
+								std::cout << "BoincCpuLoad: " << boinc_cpu_load_ratio << std::endl;
+								std::cout << "UserCpuLoad: " << user_cpu_load_ratio << std::endl;
 						}
 				}
 

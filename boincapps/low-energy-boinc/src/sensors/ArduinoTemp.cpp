@@ -95,9 +95,7 @@ struct ArduinoTempSensor : Sensor {
 		}
 
 		void identify() {
-				std::cout << "identify" << std::endl;
 				if (m_flag == Undefine) {
-				
 						// Questions device
 						std::cout << "Send Question" << std::endl;
 						sendPacket( ArduinoPacket::sm_id_question );
@@ -109,7 +107,6 @@ struct ArduinoTempSensor : Sensor {
 				
 						m_flag = (p == ArduinoPacket:: sm_id_answer) ? Arduino : NoArduino;
 				}
-				std::cout << "end identify" << std::endl;
 		}
 
 		bool is_arduino() const {

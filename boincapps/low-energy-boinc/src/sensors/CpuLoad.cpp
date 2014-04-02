@@ -13,7 +13,7 @@
 
 using namespace std;
 
-static const bool debug = true;
+static const bool debug = false;
 
 static const string ERRORS[] = {
 #define ERROR_NO_ERROR 0

@@ -2,11 +2,18 @@
 #include <fstream>
 #include <sstream>
 #include <csignal>
-#include <unistd.h>
+
 #include "boinc_api.h"
 #include "filesys.h"
 #include "util.h"
-#include "sensors/Sensors.hpp"
+#include "Sensors.hpp"
+
+
+#ifdef _WIN32
+
+#else // Unix
+	//#include <unistd.h>
+#endif
 
 using namespace std;
 
@@ -17,23 +24,23 @@ static void signal_handler(int signum) {
 }
 
 static long get_milestone() {
-	string str;
-	int err = boinc_resolve_filename_s("milestone", str);
-	if (err) {
-		cerr << "boinc_resolve_filename_s: milestone: " << err << endl;
-		boinc_finish(err);
-	}
+string str;
+int err = boinc_resolve_filename_s("milestone", str);
+if (err) {
+cerr << "boinc_resolve_filename_s: milestone: " << err << endl;
+boinc_finish(err);
+}
 
-	ifstream ifs(str.data());
-	if (!ifs.is_open()) {
-		return 0;
-	}
+ifstream ifs(str.data());
+if (!ifs.is_open()) {
+return 0;
+}
 
-	long milestone = 0;
-	ifs >> milestone;
-	ifs.close();
+long milestone = 0;
+ifs >> milestone;
+ifs.close();
 
-	return milestone;
+return milestone;
 }
 
 static void save_milestone(long milestone) {
@@ -44,39 +51,43 @@ static void save_milestone(long milestone) {
         }
 
         ofs << milestone << endl;
-	ofs.close();
+ofs.close();
 
-	string str;
-	int err = boinc_resolve_filename_s("milestone", str);
-	if (err) {
-		cerr << "boinc_resolve_filename_s: milestone: " << err << endl;
-		boinc_finish(err);
-	}
+string str;
+int err = boinc_resolve_filename_s("milestone", str);
+if (err) {
+cerr << "boinc_resolve_filename_s: milestone: " << err << endl;
+boinc_finish(err);
+}
 
-	err = boinc_rename("milestone_tmp", str.c_str());
-	if (err) {
-		cerr << "boinc_rename: milestone_tmp milestone: " << err << endl;
-		boinc_finish(err);
-	}
+err = boinc_rename("milestone_tmp", str.c_str());
+if (err) {
+cerr << "boinc_rename: milestone_tmp milestone: " << err << endl;
+boinc_finish(err);
+}
 }
 
 int main(int, char**) {
-
         int err = boinc_init();
         if (err) {
                 cerr << "boinc_init: " << err << endl;
                 boinc_finish(err);
         }
 
-	int standalone = boinc_is_standalone();
+int standalone = boinc_is_standalone();
 
-        if (standalone) {
-                signal(SIGINT, signal_handler);
-                signal(SIGHUP, signal_handler);
-                signal(SIGQUIT, signal_handler);
-                signal(SIGTERM, signal_handler);
-                signal(SIGPWR, signal_handler);
-        }
+		#ifdef _WIN32
+
+		#else // Unix
+			if (standalone) {
+				//signal(SIGINT, signal_handler);
+					//signal(SIGHUP, signal_handler);
+					//signal(SIGQUIT, signal_handler);
+					//signal(SIGTERM, signal_handler);
+					//signal(SIGPWR, signal_handler);
+			}
+		#endif
+
 
         string in_s;
         err = boinc_resolve_filename_s("in", in_s);
@@ -86,7 +97,7 @@ int main(int, char**) {
         }
 
         long milestones = 0;
-	double seconds = 0;
+		double seconds = 0;
         ifstream in(in_s.data());
         if (!in.is_open()) {
                 cerr << "ifstream: can't open: " << in_s << endl;
@@ -117,17 +128,17 @@ int main(int, char**) {
 
         double t0 = boinc_elapsed_time();
         double t1 = t0;
-	long start_milestone = get_milestone();
+long start_milestone = get_milestone();
         boinc_fraction_done((seconds * start_milestone) / (seconds * milestones));
-
+		std::cout <<  "milestones: " <<  milestones << std::endl;
         for (long i = start_milestone; i < milestones; i++) {
 
-		save_milestone(i);
+				save_milestone(i);
 
                 while ((seconds * start_milestone) + (t1 - t0) < (seconds * (i + 1))) {
                         if (signaled) break;
                         boinc_fraction_done(((seconds * start_milestone) + (t1 - t0)) / (seconds * milestones));
-                        Sensors::update();
+						Sensors::update();
 
                         while (true) {
                                 if (signaled) break;
@@ -145,27 +156,26 @@ int main(int, char**) {
                 Sensors::print_datapoints(trickle);
 
                 if (trickle.tellp() > 0) {
-			if (standalone) {
-				cout << trickle.str() << endl;
-			}
-			else {
-				err = boinc_send_trickle_up((char*) "low-energy-boinc", (char*) trickle.str().data());
-				if (err) {
-					cerr << "boinc_send_trickle_up error: " << err << endl;
-					boinc_finish(err);
-				}
-			}
+					if (standalone) {
+						cout << trickle.str() << endl;
+					} else {
+						err = boinc_send_trickle_up((char*) "low-energy-boinc", (char*) trickle.str().data());
+						if (err) {
+							cerr << "boinc_send_trickle_up error: " << err << endl;
+							boinc_finish(err);
+						}
+					}
                 }
         }
 
-	ofstream out(out_s.data());
-	if (!out.is_open()) {
-		cerr << "ofstream: can't open: " << out_s << endl;
-		boinc_finish(-1);
-	}
+		ofstream out(out_s.data());
+		if (!out.is_open()) {
+			cerr << "ofstream: can't open: " << out_s << endl;
+			boinc_finish(-1);
+		}
 
-	out << milestones << " " << seconds << endl;
-	out.close();
+		out << milestones << " " << seconds << endl;
+		out.close();
 
         boinc_fraction_done(1);
         boinc_finish(0);

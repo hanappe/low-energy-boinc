@@ -54,20 +54,25 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>./depends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>
+      </RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>
+      </LinkLibraryDependencies>
+    </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="depends\serial\impl\unix.cc" />
     <ClCompile Include="depends\serial\impl\win.cc" />
     <ClCompile Include="depends\serial\serial.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="depends\serial\impl\unix.h" />
     <ClInclude Include="depends\serial\impl\win.h" />
     <ClInclude Include="depends\serial\serial.h" />
     <ClInclude Include="depends\serial\v8stdint.h" />
