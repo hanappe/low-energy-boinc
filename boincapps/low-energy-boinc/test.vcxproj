@@ -93,6 +93,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\sensors\ArduinoTemp.cpp" />
     <ClCompile Include="src\sensors\BoincSensors.cpp" />
     <ClCompile Include="src\sensors\BoincUserCpuLoad.cpp" />
     <ClCompile Include="src\sensors\CpuLoad.cpp" />
@@ -110,6 +111,7 @@
     <ClCompile Include="src\test\test.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\sensors\ArduinoTemp.hpp" />
     <ClInclude Include="src\sensors\BoincSensors.hpp" />
     <ClInclude Include="src\sensors\BoincUserCpuLoad.hpp" />
     <ClInclude Include="src\sensors\CpuLoad.hpp" />

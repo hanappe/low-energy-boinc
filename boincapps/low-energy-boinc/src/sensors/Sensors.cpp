@@ -101,7 +101,8 @@ void Sensors::print_datapoints(ostream& s) {
 
                         for (size_t j = 0; j < ndatapoints_; j++) {
                                 s << index << ",";
-                                sensor->m_datapoints[j].print_to(s);
+								s << sensor->m_datapoints[j]; // Print data point to stream
+                                //sensor->m_datapoints[j].print_to(s);
                                 s << endl;
                         }
 

@@ -11,7 +11,7 @@
 #ifdef _WIN32
 
 #else // Unix
-	//#include <unistd.h>
+	#include <unistd.h>
 #endif
 
 using namespace std;
@@ -129,7 +129,7 @@ int standalone = boinc_is_standalone();
         double t1 = t0;
 long start_milestone = get_milestone();
         boinc_fraction_done((seconds * start_milestone) / (seconds * milestones));
-		std::cout <<  "milestones: " <<  milestones << std::endl;
+
         for (long i = start_milestone; i < milestones; i++) {
 
 				save_milestone(i);
