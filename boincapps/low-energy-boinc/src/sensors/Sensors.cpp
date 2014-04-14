@@ -8,8 +8,9 @@
 
 
 #ifdef _WIN32
-	//#include "ArduinoTemp.hpp"
+	#include "ArduinoTemp.hpp"
 	#include "BoincUserCpuLoad.hpp"
+	#include "Ghost.hpp"
 #else // Unix
 	#include "PStates.hpp"
 	#include "ACPI.hpp"
@@ -24,7 +25,7 @@ static const bool debug = false;
 static vector<SensorManager*> managers;
 
 void Sensors::update() {
-        if (managers.size() == 0) {
+        if (managers.empty()) {
 
 				//managers.push_back(getWattsupManager());
 				managers.push_back(getBoincSensorsManager());
@@ -32,8 +33,9 @@ void Sensors::update() {
 				managers.push_back(getLibSensorsManager());
 
 				#ifdef _WIN32
-					//managers.push_back(getArduinoTempManager());
+					managers.push_back(getArduinoTempManager());
 					managers.push_back(getBoincUserCpuLoadManager());
+					managers.push_back(getGhostManager());
 				#else // Unix
 					managers.push_back(getBoincCpuLoadManager());
 					managers.push_back(getUsersCpuLoadManager());
@@ -44,14 +46,15 @@ void Sensors::update() {
         }
 
         size_t nmanagers = managers.size();
-        for (size_t i = 0; i < nmanagers; i++) {
-                if (debug) cout << managers[i]->m_name << ".update_sensors()" << endl;
+        for (size_t i = 0; i < nmanagers; ++i) {
+                if (debug)
+					cout << managers[i]->m_name << ".update_sensors()" << endl;
                 managers[i]->update_sensors();
         }
 }
 
 void Sensors::add_sensor_manager(SensorManager* m) {
-        size_t nmanagers = managers.size();
+		size_t nmanagers = managers.size();
         for (size_t i = 0; i < nmanagers; i++)
                 if (managers[i] == m) return;
         managers.push_back(m);
@@ -60,69 +63,61 @@ void Sensors::add_sensor_manager(SensorManager* m) {
 void Sensors::print_datapoints(ostream& s) {
         SensorV sensors;
         ErrorV errors;
-        size_t nmanagers = managers.size();
-        for (size_t i = 0; i < nmanagers; i++) {
-                managers[i]->add_sensors(sensors, errors);
-        }
 
-        size_t nsensors = sensors.size();
-        size_t ndatapoints = 0;
-        for (size_t i = 0; i < nsensors; i++) {
-                Sensor* sensor = sensors[i];
-                ndatapoints += sensor->m_datapoints.size();
-        }
+		// Each SensorManager
+		for (std::vector<SensorManager*>::iterator it = managers.begin(); it != managers.end(); ++it) {
+			(*it)->add_sensors(sensors, errors);
+		}
 
-        if (ndatapoints > 0) {
+
+		// Each Sensor
+		size_t total_datapoints = 0;
+		for (SensorV::iterator it = sensors.begin(); it != sensors.end(); ++it) {
+			total_datapoints = (*it)->m_datapoints.size();
+		}
+
+
+        if (total_datapoints > 0) {
                 s << "<sensors>" << endl;
 
                 size_t index = 0;
-                for (size_t i = 0; i < nsensors; i++) {
-                        Sensor* sensor = sensors[i];
-                        if (sensor->m_datapoints.size() == 0) {
+				for (SensorV::const_iterator it = sensors.begin(); it != sensors.end(); ++it) {
+                        const Sensor* sensor = (*it);
+                        if (sensor->m_datapoints.empty()) {
                                 continue;
                         }
 
-                        s << index++ << ","
-                          << sensor->m_name << ","
-                          << sensor->m_description << endl;
+                        s << index++ << "," << (*sensor) << endl;
                 }
 
                 s << "</sensors>" << endl
                   << "<datapoints>" << endl;
 
                 index = 0;
-
-                for (size_t i = 0; i < nsensors; i++) {
-                        Sensor* sensor = sensors[i];
-                        size_t ndatapoints_ = sensor->m_datapoints.size();
-                        if (ndatapoints_ == 0) {
+				for (SensorV::iterator it = sensors.begin(); it != sensors.end(); ++it) {
+                        Sensor* sensor = (*it);
+						DatapointV& datapoints = sensor->m_datapoints;
+                        
+						if (datapoints.empty()) {
                                 continue;
                         }
-
-                        for (size_t j = 0; j < ndatapoints_; j++) {
-                                s << index << ",";
-								s << sensor->m_datapoints[j]; // Print data point to stream
-                                //sensor->m_datapoints[j].print_to(s);
-                                s << endl;
+						
+						for (DatapointV::iterator it = datapoints.begin(); it != datapoints.end(); ++it) {
+                                s << index << "," << (*it) << endl; // Print Datapoint to stream
                         }
 
-                        sensor->m_datapoints.clear();
+                        datapoints.clear();
                         index++;
                 }
 
                 s << "</datapoints>" << endl;
         }
 
-        size_t nerrors = errors.size();
-
-        if (nerrors > 0) {
+        if (!errors.empty()) {
                 s << "<errors>" << endl;
 
-                for (size_t i = 0; i < nerrors; i++) {
-                        const Error& error = errors[i];
-                        s << error.m_module << ","
-                          << error.m_code << ","
-                          << error.m_text << endl;
+				for (ErrorV::const_iterator it = errors.begin(); it != errors.end(); ++it) {
+                        s << (*it) << endl; // Print Error to stream
                 }
 
                 s << "</errors>" << endl;

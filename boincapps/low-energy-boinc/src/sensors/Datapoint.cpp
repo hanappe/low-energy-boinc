@@ -125,6 +125,6 @@ void DatapointV::push_back(const Datapoint& datapoint) {
                 m_firstDatapoint = false;
         }
 
-        vector<Datapoint>::push_back(datapoint);
+        std::vector<Datapoint>::push_back(datapoint);
 }
 

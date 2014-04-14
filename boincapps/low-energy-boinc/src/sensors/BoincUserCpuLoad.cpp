@@ -70,11 +70,12 @@ struct BoincUserCpuLoadManager : SensorManager {
 								m_error_reported = true;
 						}
 						return;
-				}
+				} else {
 
-				update_sensors();
-				sensors.push_back(&m_boinc_sensor);
-				sensors.push_back(&m_user_sensor);
+					update_sensors();
+					sensors.push_back(&m_boinc_sensor);
+					sensors.push_back(&m_user_sensor);
+				}
 		}
 
         void update_sensors() {
@@ -91,8 +92,17 @@ struct BoincUserCpuLoadManager : SensorManager {
 				Wmi::GetInstance()->getBoincAndUserCpuLoad(boinc_cpu_load, user_cpu_load);
 
                 if (m_record_time > 0) {
-						double boinc_cpu_load_ratio = (boinc_cpu_load / 100.0);
-						double user_cpu_load_ratio = (user_cpu_load / 100.0);
+						
+						double boinc_cpu_load_ratio = 0;
+						if (boinc_cpu_load > 0) {
+							boinc_cpu_load_ratio = (static_cast<double>(boinc_cpu_load) / 100.0);
+						}
+						
+						double user_cpu_load_ratio = 0;
+						if (user_cpu_load > 0) {
+							user_cpu_load_ratio = (static_cast<double>(user_cpu_load) / 100.0);
+						}
+
 						m_boinc_sensor.m_datapoints.push_back(Datapoint(rounded_t, boinc_cpu_load_ratio));
 						m_user_sensor.m_datapoints.push_back(Datapoint(rounded_t, user_cpu_load_ratio));
 						if (debug) {
@@ -107,7 +117,7 @@ struct BoincUserCpuLoadManager : SensorManager {
 
 #endif // _WIN32
 
-static BoincUserCpuLoadManager manager;
+static BoincUserCpuLoadManager manager = BoincUserCpuLoadManager();
 
 SensorManager* getBoincUserCpuLoadManager() {
         return &manager;

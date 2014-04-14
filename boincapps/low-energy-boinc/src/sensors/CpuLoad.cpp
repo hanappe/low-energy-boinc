@@ -66,7 +66,6 @@ struct CpuLoadManager : SensorManager {
         int m_update_period;
         time_t m_update_time;
         time_t m_record_time;
-        CpuStat m_stat;
 
         CpuLoadManager() {
                 m_name = "CpuLoadManager";
@@ -118,20 +117,22 @@ struct CpuLoadManager : SensorManager {
                 m_update_time = t;
                 long rounded_t = (t / m_update_period) * m_update_period;
 				
-				const long long load_percentage = Wmi::GetInstance()->getTotalCpuLoad();
+				const long long cpu_load = Wmi::GetInstance()->getTotalCpuLoad();
 
-				CpuStat stat;
-				stat.load_percentage = load_percentage;
 
                 if (m_record_time > 0) {
-						float ratio = load_percentage / 100.0f;
-						if (debug) {
-							std::cout << "CpuLoad: " << ratio << std::endl;
+
+						double cpu_load_ratio = 0;
+						if (cpu_load > 0) {
+							cpu_load_ratio = (static_cast<double>(cpu_load) / 100.0);
 						}
-                        m_machine.m_datapoints.push_back(Datapoint(rounded_t, ratio));
+
+						if (debug) {
+							std::cout << "CpuLoad: " << cpu_load_ratio << std::endl;
+						}
+                        m_machine.m_datapoints.push_back(Datapoint(rounded_t, cpu_load_ratio));
                 }
 				m_record_time = t;
-                m_stat = stat;
         }
 };
 

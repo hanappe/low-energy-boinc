@@ -81,22 +81,23 @@ struct BoincSensorsManager : SensorManager {
                         delete m_sensors[i];
         }
 
-        void add_sensors(SensorV& sensors, ErrorV& errors) {
+        void add_sensors(SensorV& sensors_out, ErrorV& errors) {
+
                 if (m_error) {
                         if (!m_error_reported) {
                                 errors.push_back(Error(__FILE__, m_error, ERRORS[m_error]));
                                 m_error_reported = true;
                         }
                         m_error = 0;
-                        return;
-                }
-
-                for (size_t i = 0; i < m_sensors.size(); i++)
-                        sensors.push_back(m_sensors[i]);
+                } else {
+					for (size_t i = 0; i < m_sensors.size(); i++)
+							sensors_out.push_back(m_sensors[i]);
+				}
         }
 
         void update_sensors() {
                 if (m_error) return;
+
                 time_t t = Datapoint::get_current_time();
                 if (t < m_update_time + m_update_period) return;
                 m_update_time = t;

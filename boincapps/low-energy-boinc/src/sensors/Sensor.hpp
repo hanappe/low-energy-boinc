@@ -5,10 +5,13 @@
 #include "Datapoint.hpp"
 
 struct Sensor {
-        std::string m_name;
+
+        virtual ~Sensor();
+		friend std::ostream& operator<<(std::ostream& os, const Sensor& e);
+
+		std::string m_name;
         std::string m_description;
         DatapointV m_datapoints;
-        virtual ~Sensor();
 };
 
 typedef std::vector<Sensor*> SensorV;

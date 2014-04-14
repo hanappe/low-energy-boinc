@@ -8,7 +8,8 @@ struct SensorManager {
         std::string m_name;
 
         virtual ~SensorManager();
-        virtual void add_sensors(SensorV& sensors, ErrorV& errors) = 0;
+		// Add SensorManager's sensors to sensors_out
+        virtual void add_sensors(SensorV& sensors_out, ErrorV& errors) = 0;
         virtual void update_sensors() = 0;
 };
 

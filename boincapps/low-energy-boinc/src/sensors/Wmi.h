@@ -72,7 +72,7 @@ public:
 	long long getProcessCpuLoad(long long processId); // Get Cpu usage [0, 100] of process given by process id
 	long long getProcessCpuLoad(std::vector<long long> processId); // Get Cpu usage [0, 100] of process given by process id
 	
-	// Helper/Debug function
+	// Helper/Debug function TODO Remove
 	void printAllProcess();
 
 	std::map<BSTR, BSTR> getLoggedUsersId(); // ???
