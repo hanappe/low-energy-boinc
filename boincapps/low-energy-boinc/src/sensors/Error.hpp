@@ -3,11 +3,12 @@
 
 #include <string>
 #include <vector>
+#include <iostream>
 
 struct Error {
         Error(std::string module, int code, std::string text);
 
-		friend std::ostream& operator<<(std::ostream& os, const Error& e);
+        friend std::ostream& operator<<(std::ostream& os, const Error& e);
 
         int m_code;
         std::string m_module;
