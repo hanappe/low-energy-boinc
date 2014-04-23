@@ -21,14 +21,16 @@ struct ResultSensor : Sensor {
 
                 m_name = toOSDName(m_project_url + m_result_name);
                 m_description = "workunit";
-				//sensorLog("constructor");
-				FileLog() << "constructor" << std::endl;
         }
 
         void update(time_t t, RESULT* result) {
-                if (m_updated) return;
-				FileLog() << "result->fraction_done: " << result->fraction_done << std::endl;
-                if (result->fraction_done > 0) m_datapoints.push_back(Datapoint(t, result->fraction_done));
+                if (m_updated) return;                
+                if (result->fraction_done > 0) {
+                        std::ostringstream oss;
+                        oss << "result->fraction_done: " << result->fraction_done;
+                        fileLog(oss.str());
+                        m_datapoints.push_back(Datapoint(t, result->fraction_done));
+                }
                 m_updated = true;
         }
 
@@ -76,8 +78,8 @@ struct BoincSensorsManager : SensorManager {
 
                 if (m_boinc_rpc.init("localhost") != 0) {
                         m_error = ERROR_BOINC_NOT_RUNNING;
-						FileLog() << "ERROR_BOINC_NOT_RUNNING: " << m_error << std::endl;
-						return;
+                        fileLog("ERROR_BOINC_NOT_RUNNING");
+                        return;
                 }
         }
 
@@ -94,15 +96,15 @@ struct BoincSensorsManager : SensorManager {
                         }
                         m_error = 0;
                 } else {
-						for (size_t i = 0; i < m_sensors.size(); i++)
-								sensors_out.push_back(m_sensors[i]);
-				}
+                        for (size_t i = 0; i < m_sensors.size(); i++)
+                                sensors_out.push_back(m_sensors[i]);
+                }
         }
-
+        
         void update_sensors() {
-				//std::cout << "update_sensors m_error" << m_error <<std::endl;
+                //std::cout << "update_sensors m_error" << m_error <<std::endl;
                 if (m_error) return;
-
+                
                 time_t t = Datapoint::get_current_time();
                 if (t < m_update_time + m_update_period) return;
                 m_update_time = t;
