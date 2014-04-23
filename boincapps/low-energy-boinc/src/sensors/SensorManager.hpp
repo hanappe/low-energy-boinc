@@ -11,6 +11,8 @@ struct SensorManager {
 		// Add SensorManager's sensors to sensors_out
         virtual void add_sensors(SensorV& sensors_out, ErrorV& errors) = 0;
         virtual void update_sensors() = 0;
+
+		inline Logger FileLog() { return Logger(m_name); }
 };
 
 #endif

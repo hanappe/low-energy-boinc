@@ -27,21 +27,22 @@ static vector<SensorManager*> managers;
 void Sensors::update() {
         if (managers.empty()) {
 
-				//managers.push_back(getWattsupManager());
 				managers.push_back(getBoincSensorsManager());
 				managers.push_back(getCpuLoadManager());
-				managers.push_back(getLibSensorsManager());
+				managers.push_back(getWattsupManager());
 
 				#ifdef _WIN32
 					managers.push_back(getArduinoTempManager());
 					managers.push_back(getBoincUserCpuLoadManager());
 					managers.push_back(getGhostManager());
 				#else // Unix
+					managers.push_back(getACPIManager());
 					managers.push_back(getBoincCpuLoadManager());
+					managers.push_back(getLibSensorsManager());
+					managers.push_back(getPStatesManager());
 					managers.push_back(getUsersCpuLoadManager());
 					managers.push_back(getTEMPerManager());
-					managers.push_back(getPStatesManager());
-					managers.push_back(getACPIManager());
+					
 				#endif   
         }
 

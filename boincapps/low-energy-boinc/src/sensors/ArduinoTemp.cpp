@@ -14,7 +14,7 @@
 	#define PORT_PREFIX_B "/dev/ttyUSB"
 #endif
 
-static const bool debug = true;
+static const bool debug = false;
 
 static const std::string ERRORS[] = {
 #define ERROR_NO_ERROR 0
@@ -201,6 +201,8 @@ struct ArduinoTempSensor : Sensor {
 					if (identify()) {
 						m_serial.flush();
 						device_opened = true;
+					} else {
+						m_serial.close();
 					}
 				} 
 			}
@@ -348,9 +350,14 @@ struct ArduinoTempManager : SensorManager {
                 m_name = "ArduinoTempManager";
                 m_error = 0;
                 m_error_reported = false;
+
+				m_arduino_temp = 0;	
+
                 m_update_period = 5;
                 m_update_time = 0;
-				m_arduino_temp = 0;	
+
+				m_find_device_period = debug ? 10 : 60; // Try to find a device each x second
+                m_find_device_time = 0;
         }
 
         ~ArduinoTempManager() {

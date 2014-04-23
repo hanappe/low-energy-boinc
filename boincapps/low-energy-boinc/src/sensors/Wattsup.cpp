@@ -162,10 +162,12 @@ struct WattsupSensor : Sensor {
 
 		double m_last_watts;
 
-		serial::Serial * m_serial;
+		serial::Serial m_serial;
 
         WattsupSensor(const string& device) {
-				
+				if (debug)
+						std::cout << "WattsupSensor() ?" << std::endl;
+					
                 m_name = "wattsup";
                 m_description = "energy consumption";
 
@@ -180,9 +182,6 @@ struct WattsupSensor : Sensor {
                
                
                 m_last_watts = -1;
-
-				m_serial = 0;
-
 
                 if (!open())
 					return;
@@ -217,10 +216,11 @@ struct WattsupSensor : Sensor {
         }
 
         ~WattsupSensor() {
-                close();
+				close();
         }
 
         bool open() {
+
 				bool device_opened = false;
 
 				if (is_open()) {
@@ -229,28 +229,23 @@ struct WattsupSensor : Sensor {
 					
 				} else {
 				
-					m_serial = new serial::Serial();
-
-					m_serial->setPort(m_device_port);
-					m_serial->setBaudrate(115200);
+					m_serial.setPort(m_device_port);
+					m_serial.setBaudrate(115200);
 					//serial::Timeout t(1000, 1000);
-					m_serial->setTimeout(serial::Timeout::simpleTimeout(1000));
-					m_serial->open();
+					m_serial.setTimeout(serial::Timeout::simpleTimeout(2000));
+					m_serial.open();
 
 					// Open port
-					if (m_serial->isOpen()) {
+					if (m_serial.isOpen()) {
+						m_serial.flush();
 						// Check if the device is well a Wattsup
 						if (identify()) {
-							m_serial->flush();
+							m_serial.flush();
 							device_opened = true;
+						} else {
+							m_serial.close();
 						}
-					} 
-
-					if (!device_opened) {
-						delete m_serial;
-						 m_serial = 0;
 					}
-
 				}
 
 				return device_opened;
@@ -259,7 +254,6 @@ struct WattsupSensor : Sensor {
 		// Send 
 
 		bool identify() {
-			//std::cout << "begin identify"<< std::endl;
 
 			bool identified = false;
 
@@ -287,13 +281,12 @@ struct WattsupSensor : Sensor {
 					identified = true;
 				}
 			}
-			
-			//std::cout << "end identify"<< std::endl;
+
 			return identified;
 		}
 
         bool is_open() {
-				return m_serial && m_serial->isOpen();
+				return m_serial.isOpen();
         }
 
         void close() {
@@ -307,14 +300,12 @@ struct WattsupSensor : Sensor {
 						WattsupCommand::SetupInternalLogging600s(p);
 
 						write(p);
-                        
-						m_serial->close();
-                }
 
-				if (m_serial) {
-					delete m_serial;
-					m_serial = 0;
+                        m_serial.flush();
+						
 				}
+
+				m_serial.close();
 
                 m_buf_len = 0;
                 m_commands.clear();
@@ -355,7 +346,7 @@ struct WattsupSensor : Sensor {
 				try {
 					int pos = 0;
 					while (pos < p.m_len) {
-							int res = m_serial->write((const uint8_t *)p.m_buf + pos, p.m_len - pos);
+							int res = m_serial.write((const uint8_t *)p.m_buf + pos, p.m_len - pos);
 							if (res < 0) {
 									return false;
 							}
@@ -368,11 +359,7 @@ struct WattsupSensor : Sensor {
 					}
 				
 
-					if (m_serial) {
-						m_serial->close();
-						delete m_serial;
-						m_serial = 0;
-					}
+					close();
 				}
 
                 return true;
@@ -387,11 +374,11 @@ struct WattsupSensor : Sensor {
 				while (true) {
 						
 						int res = 0;
-						size_t available = m_serial->available();
+						size_t available = m_serial.available();
 						if (!available) {
 							break;
 						} else {
-							res = m_serial->read((uint8_t*)buffer + buf_len, available);
+							res = m_serial.read((uint8_t*)buffer + buf_len, available);
 						}
 						
 						if (res <= 0) {
@@ -408,12 +395,9 @@ struct WattsupSensor : Sensor {
 				if (debug) {
 					std::cout << "exception thrown while wattsup reading" << std::endl;
 				}
-				
-				if (m_serial) {
-					m_serial->close();
-					delete m_serial;
-					m_serial = 0;
-				}
+
+				close();
+
 			}
 			
 			if (buf_len > 0) {
@@ -588,79 +572,70 @@ struct WattsupSensor : Sensor {
 
         void update() {
 
-				try {
 
-					if (!is_open()) {
-						close();
-						return;
-					}
-
-					Packet p;
-
-					while (!m_commands.empty()) {
-							WattsupCommand& command = m_commands.front();
-							time_t t = Datapoint::get_current_time();
-
-							if (command.m_write_time == 0) {
-									// Send command.
-									//std::cout << "Send command" << std::endl;
-									write(command.m_p);
-									command.m_write_time = t;
-							}
-
-							if (command.m_wait_reply == '\0') {
-									// No need to wait for a reply.
-									m_commands.pop_front();
-									continue;
-							}
-
-							if (t > command.m_write_time + 5) {
-									// Reply timed out.
-									//std::cout << "Reply timed out" << std::endl;
-									m_commands.pop_front();
-									close();
-									return;
-							}
-
-							if (read(p) && p.m_cmd == command.m_wait_reply) {
-									// Reply received. Proceed forward.
-									//std::cout << "Reply received. Proceed forward." << std::endl;
-									m_commands.pop_front();
-									continue;
-							}
-
-							return;
-					}
-
-					double watts = -1;
-
-					while (read(p)) {
-							if (p.m_cmd == 'd' && p.m_sub_cmd == '-') {
-									watts = strtod(p.m_fields[0], NULL) / 10.0;
-							}
-					}
-
-					time_t t = Datapoint::get_current_time();
-
-					if (watts != -1) {
-							//std::cout << "Datapoint(t, watts): " << t << " : " << watts << std::endl;
-							m_datapoints.push_back(Datapoint(t, watts));
-							m_last_watts = watts;
-					}
-
-					if (t > m_last_read_time + 5) {
-							//m_datapoints.push_back(Datapoint(t, NAN));
-							close();
-					}
-				} catch(...) {
-					std::cout << "catch" << std::endl;
-					//close();
-					if (m_serial) {
-						close();
-						
-					}
-					
+				if (!is_open()) {
+					close();
+					return;
 				}
+
+				Packet p;
+
+				while (!m_commands.empty()) {
+						WattsupCommand& command = m_commands.front();
+						time_t t = Datapoint::get_current_time();
+
+						if (command.m_write_time == 0) {
+								// Send command.
+								//std::cout << "Send command" << std::endl;
+								write(command.m_p);
+								command.m_write_time = t;
+						}
+
+						if (command.m_wait_reply == '\0') {
+								// No need to wait for a reply.
+								m_commands.pop_front();
+								continue;
+						}
+
+						if (t > command.m_write_time + 5) {
+								// Reply timed out.
+								//std::cout << "Reply timed out" << std::endl;
+								m_commands.pop_front();
+								close();
+								return;
+						}
+
+						if (read(p) && p.m_cmd == command.m_wait_reply) {
+								// Reply received. Proceed forward.
+								//std::cout << "Reply received. Proceed forward." << std::endl;
+								m_commands.pop_front();
+								continue;
+						}
+
+						return;
+				}
+
+				double watts = -1;
+
+				while (read(p)) {
+						if (p.m_cmd == 'd' && p.m_sub_cmd == '-') {
+								watts = strtod(p.m_fields[0], NULL) / 10.0;
+						}
+				}
+
+				time_t t = Datapoint::get_current_time();
+
+				if (watts != -1) {
+						//std::cout << "Datapoint(t, watts): " << t << " : " << watts << std::endl;
+						m_datapoints.push_back(Datapoint(t, watts));
+						m_last_watts = watts;
+				}
+
+				if (t > m_last_read_time + 5) {
+						//m_datapoints.push_back(Datapoint(t, NAN));
+						close();
+				}
+				
         }
 
 };
@@ -683,9 +658,6 @@ struct WattsupManager : SensorManager {
         int m_find_device_max_attempts;
 
         WattsupManager() {
-				if (debug) {
-					std::cout << "WattsupManager()" << std::endl;
-				}
                 m_name = "WattsupManager";
                 m_error = 0;
                 m_error_reported = false;
@@ -709,11 +681,6 @@ struct WattsupManager : SensorManager {
         }
 
         static WattsupSensor * FindWattsups() {
-
-				if (debug) {
-					std::cout << "FindWattsups()"<< std::endl;
-				}
-
                 //if (m_error) return 0;
 				
 				WattsupSensor * wattsup_sensor = 0;

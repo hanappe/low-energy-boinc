@@ -977,7 +977,10 @@ long long Wmi::getUserCpuLoad()
 	if (object)
 		object->Release();
 
-	return total_user_cpu_load / num_core;
+	if (total_user_cpu_load > 0)
+		total_user_cpu_load = total_user_cpu_load / num_core;
+
+	return total_user_cpu_load;
 }
 
 long long Wmi::getProcessCpuLoad(std::vector<long long> process_id_list)
@@ -1100,17 +1103,17 @@ void Wmi::getBoincAndUserCpuLoad(long long& boin_cpu_load, long long& user_cpu_l
 						
 		long long process_id = var.iVal;
 
-		// Get the parent process id
+		// Get parent process id
+		VariantInit(&var);
 		result = object->Get(L"CreatingProcessID", 0, &var, NULL, NULL );
 		long long process_parent_id = var.iVal;
 
+		// Get total cpu load
+		VariantInit(&var);
 		result = object->Get(L"PercentProcessorTime", 0, &var, NULL, NULL );
 		long long process_cpu_load = _wtoi(var.bstrVal);
 
 		if (boinc_process_exists && process_parent_id == boinc_process_id) {
-
-			// Get 
-			result = object->Get(L"PercentProcessorTime", 0, &var, NULL, NULL );
 
 			boin_cpu_load += process_cpu_load;
 
@@ -1143,13 +1146,15 @@ void Wmi::getBoincAndUserCpuLoad(long long& boin_cpu_load, long long& user_cpu_l
 
 	if (enumerator)
 		enumerator->Release();
+
 	if (object)
 		object->Release();
 
-	boin_cpu_load /= NumCore();
-	user_cpu_load /= NumCore();
+	if (boin_cpu_load)
+		boin_cpu_load /= NumCore();
 
-	//return total_user_cpu_load / num_core;
+	if (user_cpu_load)
+		user_cpu_load /= NumCore();
 }
 void Wmi::printAllProcess()
 {

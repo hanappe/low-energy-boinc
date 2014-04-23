@@ -50,13 +50,13 @@ void my_sleep(unsigned long milliseconds) {
 
 int main(int argc, char** argv) {
 
-        //Sensors::add_sensor_manager(getWattsupManager());
-       // Sensors::add_sensor_manager(getLibSensorsManager());
-       // Sensors::add_sensor_manager(getCpuLoadManager());
+       Sensors::add_sensor_manager(getWattsupManager());
+       Sensors::add_sensor_manager(getBoincSensorsManager());
+       Sensors::add_sensor_manager(getCpuLoadManager());
         
 #ifdef _WIN32
-        //Sensors::add_sensor_manager(getBoincUserCpuLoadManager());
-		Sensors::add_sensor_manager(getGhostManager());
+        Sensors::add_sensor_manager(getBoincUserCpuLoadManager());
+		//Sensors::add_sensor_manager(getGhostManager());
         Sensors::add_sensor_manager(getArduinoTempManager());
         //Sensors::add_sensor_manager(getMsAcpiMa nager());
 #else // Unix
@@ -65,15 +65,16 @@ int main(int argc, char** argv) {
         signal(SIGQUIT, signal_handler);
         signal(SIGTERM, signal_handler);
         signal(SIGPWR, signal_handler);
+		//Sensors::add_sensor_manager(getACPIManager());
         //Sensors::add_sensor_manager(getArduinoTempManager());
-	
-        //Sensors::add_sensor_manager(getTEMPerManager());
-        //Sensors::add_sensor_manager(getPStatesManager());
-        //Sensors::add_sensor_manager(getBoincSensorsManager());
-        
         //Sensors::add_sensor_manager(getBoincCpuLoadManager());
+	
+        // Sensors::add_sensor_manager(getLibSensorsManager());
+		//Sensors::add_sensor_manager(getPStatesManager());
+        //Sensors::add_sensor_manager(getTEMPerManager());
         //Sensors::add_sensor_manager(getUsersCpuLoadManager());
-        //Sensors::add_sensor_manager(getACPIManager());
+        
+		
         
 #endif
 

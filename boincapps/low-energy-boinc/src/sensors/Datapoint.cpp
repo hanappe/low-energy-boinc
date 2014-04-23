@@ -43,6 +43,29 @@ localtime_r (const time_t *timer, struct tm *result)
 
 #endif // _WIN32
 
+
+namespace Time {
+	void print_format(std::ostream& os, const time_t& t)
+	{
+		struct tm tm;
+        localtime_r(&t, &tm);
+
+		os << std::setw(4) << std::setfill('0') << (1900 + tm.tm_year)
+           << '-' << std::setw(2) << std::setfill('0') << tm.tm_mon + 1
+           << '-' << std::setw(2) << std::setfill('0') << tm.tm_mday
+           << 'T' << std::setw(2) << std::setfill('0') << tm.tm_hour
+           << ':' << std::setw(2) << std::setfill('0') << tm.tm_min
+           << ':' << std::setw(2) << std::setfill('0') << tm.tm_sec;
+	}
+
+	time_t  get_current()
+	{
+		return time(NULL);
+	}
+
+} // end namespace Time
+
+
 time_t Datapoint::get_current_time() {
         return time(NULL);
 }
@@ -85,16 +108,9 @@ void Datapoint::print_to(std::ostream& st) const {
 }
 */
 std::ostream& operator<<(std::ostream& stream, const Datapoint& dp) {
-	struct tm tm;
-        localtime_r(&dp.m_time, &tm);
+		Time::print_format(stream, dp.m_time);
 
-        stream << std::setw(4) << std::setfill('0') << (1900 + tm.tm_year)
-           << '-' << std::setw(2) << std::setfill('0') << tm.tm_mon + 1
-           << '-' << std::setw(2) << std::setfill('0') << tm.tm_mday
-           << 'T' << std::setw(2) << std::setfill('0') << tm.tm_hour
-           << ':' << std::setw(2) << std::setfill('0') << tm.tm_min
-           << ':' << std::setw(2) << std::setfill('0') << tm.tm_sec
-           << ',';
+		stream  << ',';
 
         if (isnan(dp.m_value)) {
                 stream << "null";
@@ -111,7 +127,6 @@ std::ostream& operator<<(std::ostream& stream, const Datapoint& dp) {
         stream << dp.m_value;
 		return stream;
 }
-
 
 DatapointV::DatapointV() {
         m_firstDatapoint = true;

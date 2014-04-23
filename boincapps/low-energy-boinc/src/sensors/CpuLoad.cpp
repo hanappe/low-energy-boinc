@@ -128,7 +128,7 @@ struct CpuLoadManager : SensorManager {
 						}
 
 						if (debug) {
-							std::cout << "CpuLoad: " << cpu_load_ratio << std::endl;
+							std::cout << "CpuLoad: " << cpu_load << " " << cpu_load_ratio << std::endl;
 						}
                         m_machine.m_datapoints.push_back(Datapoint(rounded_t, cpu_load_ratio));
                 }

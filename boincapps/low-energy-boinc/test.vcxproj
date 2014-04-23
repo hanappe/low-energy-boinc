@@ -106,7 +106,6 @@
     <ClCompile Include="src\sensors\Datapoint.cpp" />
     <ClCompile Include="src\sensors\Error.cpp" />
     <ClCompile Include="src\sensors\Ghost.cpp" />
-    <ClCompile Include="src\sensors\LibSensors.cpp" />
     <ClCompile Include="src\sensors\Sensor.cpp" />
     <ClCompile Include="src\sensors\SensorManager.cpp" />
     <ClCompile Include="src\sensors\Sensors.cpp" />
@@ -125,7 +124,6 @@
     <ClInclude Include="src\sensors\Datapoint.hpp" />
     <ClInclude Include="src\sensors\Error.hpp" />
     <ClInclude Include="src\sensors\Ghost.hpp" />
-    <ClInclude Include="src\sensors\LibSensors.hpp" />
     <ClInclude Include="src\sensors\Sensor.hpp" />
     <ClInclude Include="src\sensors\SensorManager.hpp" />
     <ClInclude Include="src\sensors\Sensors.hpp" />

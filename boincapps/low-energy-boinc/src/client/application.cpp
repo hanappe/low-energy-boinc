@@ -23,23 +23,24 @@ static void signal_handler(int signum) {
 }
 
 static long get_milestone() {
-string str;
-int err = boinc_resolve_filename_s("milestone", str);
-if (err) {
-cerr << "boinc_resolve_filename_s: milestone: " << err << endl;
-boinc_finish(err);
-}
+	string str;
+	int err = boinc_resolve_filename_s("milestone", str);
+	if (err) {
+		cerr << "boinc_resolve_filename_s: milestone: " << err << endl;
+		boinc_finish(err);
+	}
 
-ifstream ifs(str.data());
-if (!ifs.is_open()) {
-return 0;
-}
+	ifstream ifs(str.data());
+	if (!ifs.is_open()) {
+		cerr << "can't open file: " << str << endl;
+		return 0;
+	}
 
-long milestone = 0;
-ifs >> milestone;
-ifs.close();
+	long milestone = 0;
+	ifs >> milestone;
+	ifs.close();
 
-return milestone;
+	return milestone;
 }
 
 static void save_milestone(long milestone) {
@@ -50,20 +51,20 @@ static void save_milestone(long milestone) {
         }
 
         ofs << milestone << endl;
-ofs.close();
+		ofs.close();
 
-string str;
-int err = boinc_resolve_filename_s("milestone", str);
-if (err) {
-cerr << "boinc_resolve_filename_s: milestone: " << err << endl;
-boinc_finish(err);
-}
+		string str;
+		int err = boinc_resolve_filename_s("milestone", str);
+		if (err) {
+			cerr << "boinc_resolve_filename_s: milestone: " << err << endl;
+			boinc_finish(err);
+		}
 
-err = boinc_rename("milestone_tmp", str.c_str());
-if (err) {
-cerr << "boinc_rename: milestone_tmp milestone: " << err << endl;
-boinc_finish(err);
-}
+		err = boinc_rename("milestone_tmp", str.c_str());
+		if (err) {
+			cerr << "boinc_rename: milestone_tmp milestone: " << err << endl;
+			boinc_finish(err);
+		}
 }
 
 int main(int, char**) {
@@ -73,17 +74,17 @@ int main(int, char**) {
                 boinc_finish(err);
         }
 
-int standalone = boinc_is_standalone();
+		int standalone = boinc_is_standalone();
 
 		#ifdef _WIN32
 
 		#else // Unix
 			if (standalone) {
-				//signal(SIGINT, signal_handler);
-					//signal(SIGHUP, signal_handler);
-					//signal(SIGQUIT, signal_handler);
-					//signal(SIGTERM, signal_handler);
-					//signal(SIGPWR, signal_handler);
+				signal(SIGINT, signal_handler);
+				signal(SIGHUP, signal_handler);
+				signal(SIGQUIT, signal_handler);
+				signal(SIGTERM, signal_handler);
+				signal(SIGPWR, signal_handler);
 			}
 		#endif
 
