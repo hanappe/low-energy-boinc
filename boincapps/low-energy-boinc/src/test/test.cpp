@@ -47,6 +47,8 @@ void my_sleep(unsigned long milliseconds) {
 #endif
 }
 
+#include <math.h>
+
 
 int main(int argc, char** argv) {
 
@@ -72,18 +74,14 @@ int main(int argc, char** argv) {
         // Sensors::add_sensor_manager(getLibSensorsManager());
 		//Sensors::add_sensor_manager(getPStatesManager());
         //Sensors::add_sensor_manager(getTEMPerManager());
-<<<<<<< HEAD
-        //Sensors::add_sensor_manager(getUsersCpuLoadManager());
-        
-		
-=======
+
         //Sensors::add_sensor_manager(getPStatesManager());
         //Sensors::add_sensor_manager(getBoincSensorsManager());
         
         Sensors::add_sensor_manager(getBoincCpuLoadManager());
         Sensors::add_sensor_manager(getUsersCpuLoadManager());
         //Sensors::add_sensor_manager(getACPIManager());
->>>>>>> 08bdb0afca9bf6045e5d895e05944ff2fe9bb7d5
+
         
 #endif
 

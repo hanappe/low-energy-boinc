@@ -6,9 +6,13 @@
 #include "SensorManager.hpp"
 
 struct Sensors {
-        static void update();
-        static void print_datapoints(std::ostream& s);
-        static void add_sensor_manager(SensorManager* m);
+
+		static void initManagers();
+		static void update();
+		static void releaseManagers();
+
+		static void print_datapoints(std::ostream& s);
+		static void add_sensor_manager(SensorManager* m);
 };
 
 #endif

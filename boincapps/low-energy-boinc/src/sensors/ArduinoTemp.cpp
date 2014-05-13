@@ -172,13 +172,13 @@ struct ArduinoTempSensor : Sensor {
 
 				if (!open())
 					return;
+
+				//this->fileLog("Device found ! [" + m_device_port + "]");
         }
 
         ~ArduinoTempSensor(){
-			if (m_serial.isOpen()) {
-				m_serial.flush();
-				m_serial.close();
-			}
+			close();
+			
 		}
 
 		bool open() {
@@ -187,8 +187,7 @@ struct ArduinoTempSensor : Sensor {
 			if (isOpen()) {
 				if (debug)
 					std::cout << "serial already opened" << std::endl;
-			} else {    
-				
+			} else {
 				m_serial.setPort(m_device_port);
 				m_serial.setBaudrate(9600);
 				m_serial.setTimeout(serial::Timeout::simpleTimeout(2000));
@@ -246,10 +245,13 @@ struct ArduinoTempSensor : Sensor {
                 m_closing = true;
 
                 if (m_serial.isOpen()) {
+						m_serial.flush();
                         m_serial.close();
                 }	 
                 
                 m_closing = false;
+
+				//this->fileLog("Device closed ! [" + m_device_port + "]");
         }
 
         void sendPacket(const ArduinoPacket& p) {
@@ -262,8 +264,7 @@ struct ArduinoTempSensor : Sensor {
 						m_serial.write(p.data(), p.size());
 				} catch (...) {
 					
-						m_serial.flush();
-						m_serial.close();
+						close();
 						
 						if (debug) {
 								std::cout << "[device] writing error, device closed" << std::endl;
@@ -459,9 +460,13 @@ struct ArduinoTempManager : SensorManager {
 };
 
 
-
-static ArduinoTempManager manager;
+static ArduinoTempManager * manager;
 
 SensorManager* getArduinoTempManager() {
-        return &manager;
+
+		if (!manager) {
+				manager = new ArduinoTempManager;
+		}
+
+        return manager;
 }

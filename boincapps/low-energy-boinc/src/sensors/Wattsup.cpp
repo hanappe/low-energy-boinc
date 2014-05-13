@@ -213,10 +213,13 @@ struct WattsupSensor : Sensor {
 						WattsupCommand::SetupExternalLogging1s(c);
                         m_commands.push_back(c);
                 }
+
+				//this->fileLog("Device found ! [" + m_device_port + "]");
         }
 
         ~WattsupSensor() {
 				close();
+				
         }
 
         bool open() {
@@ -310,6 +313,8 @@ struct WattsupSensor : Sensor {
                 m_buf_len = 0;
                 m_commands.clear();
                 m_closing = false;
+
+				//this->fileLog("Device closed ! [" + m_device_port + "]");
         }
 
 
@@ -1358,9 +1363,14 @@ struct WattsupManager : SensorManager {
 
 #endif // _WIN32
 
-static WattsupManager manager;
+static WattsupManager * manager;
 
 SensorManager* getWattsupManager() {
-        return &manager;
+
+		if (!manager) {
+				manager = new WattsupManager;
+		}
+
+        return manager;
 }
 

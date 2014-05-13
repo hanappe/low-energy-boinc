@@ -23,35 +23,56 @@ using namespace std;
 
 static const bool debug = false;
 static vector<SensorManager*> managers;
+static bool initilized = false;
 
-void Sensors::update() {
-        if (managers.empty()) {
+void Sensors::initManagers() {
 
+		if (!initilized) {
 				managers.push_back(getBoincSensorsManager());
 				managers.push_back(getCpuLoadManager());
 				managers.push_back(getWattsupManager());
 
-				#ifdef _WIN32
-					managers.push_back(getArduinoTempManager());
-					managers.push_back(getBoincUserCpuLoadManager());
-					managers.push_back(getGhostManager());
-				#else // Unix
-					managers.push_back(getACPIManager());
-					managers.push_back(getBoincCpuLoadManager());
-					managers.push_back(getLibSensorsManager());
-					managers.push_back(getPStatesManager());
-					managers.push_back(getUsersCpuLoadManager());
-					managers.push_back(getTEMPerManager());
+			#ifdef _WIN32
+				managers.push_back(getArduinoTempManager());
+				managers.push_back(getBoincUserCpuLoadManager());
+				managers.push_back(getGhostManager());
+			#else // Unix
+				managers.push_back(getACPIManager());
+				managers.push_back(getBoincCpuLoadManager());
+				managers.push_back(getLibSensorsManager());
+				managers.push_back(getPStatesManager());
+				managers.push_back(getUsersCpuLoadManager());
+				managers.push_back(getTEMPerManager());
 					
-				#endif   
-        }
+			#endif
 
-        size_t nmanagers = managers.size();
-        for (size_t i = 0; i < nmanagers; ++i) {
-                if (debug)
-					cout << managers[i]->m_name << ".update_sensors()" << endl;
-                managers[i]->update_sensors();
-        }
+				initilized = true;
+		}
+}
+void Sensors::update() {
+
+        if (initilized) {
+
+				size_t nmanagers = managers.size();
+				for (size_t i = 0; i < nmanagers; ++i) {
+						if (debug)
+							cout << managers[i]->m_name << ".update_sensors()" << endl;
+						managers[i]->update_sensors();
+				}
+
+		}
+}
+
+void Sensors::releaseManagers() {
+
+        if (initilized) {
+				size_t nmanagers = managers.size();
+				for (size_t i = 0; i < nmanagers; ++i) {
+						delete managers[i];
+				}
+				managers.clear();
+				initilized = false;
+		}
 }
 
 void Sensors::add_sensor_manager(SensorManager* m) {

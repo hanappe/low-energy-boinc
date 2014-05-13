@@ -18,12 +18,14 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "test.vcxproj", "{21
 		{E9CC6A20-9096-4EF0-BB7A-BC86919CB02A} = {E9CC6A20-9096-4EF0-BB7A-BC86919CB02A}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "application", "application.vcxproj", "{C8B64451-7B7F-4646-AF44-6B0760F99469}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "applicationbkp", "application.vcxproj", "{C8B64451-7B7F-4646-AF44-6B0760F99469}"
 	ProjectSection(ProjectDependencies) = postProject
 		{E9CC6A20-9096-4EF0-BB7A-BC86919CB02A} = {E9CC6A20-9096-4EF0-BB7A-BC86919CB02A}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "intelpcm", "intelpcm.vcxproj", "{C53ED9F5-F859-44B4-8DE5-6DE17F3D211F}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "simple", "simple.vcxproj", "{C807A70D-CA41-4DFD-979F-50C6AB8BFFEE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -67,6 +69,10 @@ Global
 		{C53ED9F5-F859-44B4-8DE5-6DE17F3D211F}.Debug|Win32.Build.0 = Debug|Win32
 		{C53ED9F5-F859-44B4-8DE5-6DE17F3D211F}.Release|Win32.ActiveCfg = Release|Win32
 		{C53ED9F5-F859-44B4-8DE5-6DE17F3D211F}.Release|Win32.Build.0 = Release|Win32
+		{C807A70D-CA41-4DFD-979F-50C6AB8BFFEE}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C807A70D-CA41-4DFD-979F-50C6AB8BFFEE}.Debug|Win32.Build.0 = Debug|Win32
+		{C807A70D-CA41-4DFD-979F-50C6AB8BFFEE}.Release|Win32.ActiveCfg = Release|Win32
+		{C807A70D-CA41-4DFD-979F-50C6AB8BFFEE}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

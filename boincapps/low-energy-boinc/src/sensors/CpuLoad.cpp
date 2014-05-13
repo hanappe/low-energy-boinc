@@ -269,9 +269,14 @@ struct CpuLoadManager : SensorManager {
 
 #endif // end ifdef _WIN32
 
-static CpuLoadManager manager;
+static CpuLoadManager * manager;
 
 SensorManager* getCpuLoadManager() {
-        return &manager;
+
+		if (!manager) {
+				manager = new CpuLoadManager;
+		}
+
+        return manager;
 }
 

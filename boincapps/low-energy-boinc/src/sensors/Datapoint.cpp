@@ -1,5 +1,10 @@
 #include <iomanip>
 
+
+#ifdef _MSC_VER
+#define INFINITY (DBL_MAX+DBL_MAX)
+#define NAN (INFINITY-INFINITY)
+/*
 #ifdef _WIN32
 #include <float.h>
 //#include <cmath>
@@ -8,7 +13,7 @@
 //std::nan("string") is equivalent to std::strtod("NAN(string)", (char**)NULL).
 //http://en.cppreference.com/w/c/numeric/math/nan
 
-#define NAN std::strtod("NAN(string)", (char**)NULL)
+#define NAN std::strtod("NAN(string)", (char**)NULL)*/
 #else
 #include <cmath>
 #define NAN nan("")
