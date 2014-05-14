@@ -16,12 +16,12 @@ using namespace std;
 // anonymous namespace
 namespace
 {
-		// return true if string 's' contains a substring 'substr'
-		bool contains(const std::string& s, std::string const & substr)
-		{
-				std::string::size_type n = s.find(substr);
-				return (n != std::string::npos);
-		}
+        // return true if string 's' contains a substring 'substr'
+        bool contains(const std::string& s, std::string const & substr)
+        {
+                std::string::size_type n = s.find(substr);
+                return (n != std::string::npos);
+        }
 }
 
 struct ResultSensor : Sensor {
@@ -39,8 +39,8 @@ struct ResultSensor : Sensor {
                 m_name = toOSDName(m_project_url + m_result_name);
                 m_description = "workunit";
 
-				//std::cout << "m_result_name: " <<  m_result_name << std::endl;
-				//fileLog("m_result_name: " + m_result_name);
+                //std::cout << "m_result_name: " <<  m_result_name << std::endl;
+                //fileLog("m_result_name: " + m_result_name);
         }
 
         void update(time_t t, RESULT* result) {
@@ -55,29 +55,29 @@ struct ResultSensor : Sensor {
                 }
 
 
-				/*for (int i=0; i<result->output_files.size(); i++) {
-					FILE_REF& fref = result->output_files[i];
-					fip = fref.file_info;
-					if (fip->uploaded) continue;
-					get_pathname(fip, path, sizeof(path));
-					retval = file_size(path, size);
-					if (retval) {
-						if (fref.optional) {
-							fip->upload_urls.clear();
-							continue;
-						}
-
-						// an output file is unexpectedly absent.
-						//
-						fip->status = retval;
-						had_error = true;
-						msg_printf(
-							rp->project, MSG_INFO,
-							"Output file %s for task %s absent",
-							fip->name, rp->name
-						);
-					}
-				}*/
+                /*for (int i=0; i<result->output_files.size(); i++) {
+                  FILE_REF& fref = result->output_files[i];
+                  fip = fref.file_info;
+                  if (fip->uploaded) continue;
+                  get_pathname(fip, path, sizeof(path));
+                  retval = file_size(path, size);
+                  if (retval) {
+                  if (fref.optional) {
+                  fip->upload_urls.clear();
+                  continue;
+                  }
+                  
+                  // an output file is unexpectedly absent.
+                  //
+                  fip->status = retval;
+                  had_error = true;
+                  msg_printf(
+                  rp->project, MSG_INFO,
+                  "Output file %s for task %s absent",
+                  fip->name, rp->name
+                  );
+                  }
+                  }*/
 
                 m_updated = true;
         }
@@ -107,35 +107,35 @@ static const string ERRORS[] = {
 
 
 #ifdef _WIN32
-	namespace {
-	static std::string get_current_dir() {
-
-			std::string res;
-
-			TCHAR Buffer[512] = {0};
-			DWORD dwRet;
-
-			dwRet = GetCurrentDirectory(512, Buffer);
-
-			if( dwRet != 0 ) {
-				res = std::string(Buffer);
-			} else {
-				std::cerr << "get_current_dir failed." <<  GetLastError() << endl;
-			}
-
-			return res;
+namespace {
+        static std::string get_current_dir() {
+                
+                std::string res;
+                
+                TCHAR Buffer[512] = {0};
+                DWORD dwRet;
+                
+                dwRet = GetCurrentDirectory(512, Buffer);
+                
+                if( dwRet != 0 ) {
+                        res = std::string(Buffer);
+                } else {
+                        std::cerr << "get_current_dir failed." <<  GetLastError() << endl;
+                }
+                
+                return res;
 		
 	}
 
 	static void set_current_dir(const std::string & dirpath) {
-			std::cerr << "set_current_dir:before: " << get_current_dir() << endl;
-			if( !SetCurrentDirectory(dirpath.data()))
-			{
-					std::cerr << "set_current_dir failed." <<  GetLastError() << endl;
-					return;
+                std::cerr << "set_current_dir:before: " << get_current_dir() << endl;
+                if( !SetCurrentDirectory(dirpath.data()))
+                        {
+                                std::cerr << "set_current_dir failed." <<  GetLastError() << endl;
+                                return;
 			}
-
-			std::cerr << "set_current_dir:after: " << get_current_dir() << endl;
+                
+                std::cerr << "set_current_dir:after: " << get_current_dir() << endl;
 	}
 
 }
@@ -166,15 +166,15 @@ struct BoincSensorsManager : SensorManager {
                 m_update_period = 60;
                 m_update_time = 0;
 
-
-				#ifdef _WIN32
-					//Save the current/initial directory (subdirectory in "slot")
-					m_app_path = get_current_dir();
-					
-					//Change directory to AppData/BOINC (useful for RPC things) and save it
-					chdir_to_data_dir();
-					m_boinc_path = get_current_dir();
-				#endif
+                
+		#ifdef _WIN32
+                //Save the current/initial directory (subdirectory in "slot")
+                m_app_path = get_current_dir();
+		
+                //Change directory to AppData/BOINC (useful for RPC things) and save it
+                chdir_to_data_dir();
+                m_boinc_path = get_current_dir();
+                #endif
 
 				#if defined(_WIN32) && defined(USE_WINSOCK)
 
@@ -191,20 +191,23 @@ struct BoincSensorsManager : SensorManager {
                         //fileLog("ERROR_BOINC_NOT_RUNNING");
                         return;
                 }
-
-				 setSlotDirectory();
+                #ifdef _WIN32
+                
+                setSlotDirectory();
+                
+                #endif
         }
 
         ~BoincSensorsManager() {
                 for (size_t i = 0; i < m_sensors.size(); i++)
                         delete m_sensors[i];
-
-
-				m_boinc_rpc.quit();
-
-				#if defined(_WIN32) && defined(USE_WINSOCK)
-					WSACleanup();
-				#endif
+                
+                
+                m_boinc_rpc.quit();
+                
+		#if defined(_WIN32) && defined(USE_WINSOCK)
+                WSACleanup();
+		#endif
         }
 
         void add_sensors(SensorV& sensors_out, ErrorV& errors) {
@@ -221,13 +224,17 @@ struct BoincSensorsManager : SensorManager {
         }
 
 
-		void setSlotDirectory() {
-			set_current_dir(m_app_path);
-		};
+        #ifdef _WIN32
 
-		void setBoincDirectory() {
-			set_current_dir(m_boinc_path);
-		};
+        void setSlotDirectory() {
+                set_current_dir(m_app_path);
+        };
+        
+        void setBoincDirectory() {
+                set_current_dir(m_boinc_path);
+        };
+
+        #endif
 
         void _update_sensors() {
 

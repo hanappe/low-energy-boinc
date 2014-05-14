@@ -188,7 +188,7 @@ struct PStatesManager : SensorManager {
                                 }
 
                                 double value = ((double) steps - pstate->m_steps) / (t - pstate->m_steps_time);
-								value *= 0.01;
+                                value *= 0.01;
                                 pstate->m_datapoints.push_back(Datapoint(rounded_time, value));
                                 pstate->m_steps_time = t;
                                 pstate->m_steps = steps;
@@ -199,9 +199,12 @@ struct PStatesManager : SensorManager {
 
 #endif // _WIN32
 
-static PStatesManager manager;
+static PStatesManager * manager = 0;
 
 SensorManager* getPStatesManager() {
-        return &manager;
+        if (!manager) {
+                manager = new PStatesManager;
+        }
+        return manager;
 }
 

@@ -273,10 +273,10 @@ static CpuLoadManager * manager;
 
 SensorManager* getCpuLoadManager() {
 
-		if (!manager) {
-				manager = new CpuLoadManager;
-		}
-
+        if (!manager) {
+                manager = new CpuLoadManager;
+        }
+        
         return manager;
 }
 

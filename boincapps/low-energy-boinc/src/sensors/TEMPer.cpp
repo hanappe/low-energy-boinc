@@ -280,9 +280,12 @@ struct TEMPerManager : SensorManager {
 
 #endif
 
-static TEMPerManager manager;
+static TEMPerManager * manager = 0;
 
 SensorManager* getTEMPerManager() {
-        return &manager;
+        if (!manager) {
+                manager = new TEMPerManager;
+        }
+        return manager;
 }
 

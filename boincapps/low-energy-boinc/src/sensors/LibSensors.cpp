@@ -127,10 +127,14 @@ struct LibSensorsManager : SensorManager {
         }
 };
 
-static LibSensorsManager manager;
+static LibSensorsManager * manager = 0;
 
 SensorManager* getLibSensorsManager() {
-        return &manager;
+
+        if (!manager) {
+                manager = new LibSensorsManager;
+        }
+        return manager;
 }
 
 

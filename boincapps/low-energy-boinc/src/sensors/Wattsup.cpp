@@ -293,7 +293,7 @@ struct WattsupSensor : Sensor {
         }
 
         void close() {
-				//std::cout << "WattsupSensor::close()" << std::endl; 
+
                 if (m_closing) return;
                 m_closing = true;
 
@@ -845,7 +845,7 @@ struct WattsupSensor : Sensor {
         bool m_closing;
         double m_last_watts;
 
-        WattsupSensor(const string device) {
+        WattsupSensor(const string& device) {
                 m_name = "wattsup";
                 m_description = device;
                 m_device = device;
@@ -1194,6 +1194,7 @@ struct WattsupSensor : Sensor {
         }
 
         void update() {
+
                 if (!is_open()) return;
 
                 Packet p;
@@ -1276,6 +1277,8 @@ struct WattsupManager : SensorManager {
                 m_find_wattsups_max_attempts = 3;
                 m_update_period = 1;
                 m_update_time = 0;
+                
+                m_wattsup = 0;
         }
 
         ~WattsupManager() {
@@ -1338,6 +1341,7 @@ struct WattsupManager : SensorManager {
         }
 
         void update_sensors() {
+
                 time_t t = Datapoint::get_current_time();
                 if (t < m_update_time + m_update_period) return;
                 m_update_time = t;
@@ -1366,11 +1370,11 @@ struct WattsupManager : SensorManager {
 static WattsupManager * manager;
 
 SensorManager* getWattsupManager() {
-
-		if (!manager) {
-				manager = new WattsupManager;
-		}
-
+        
+        if (!manager) {
+                manager = new WattsupManager;
+        }
+        
         return manager;
 }
 

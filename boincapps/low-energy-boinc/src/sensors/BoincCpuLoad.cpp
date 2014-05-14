@@ -231,10 +231,14 @@ struct BoincCpuLoadManager : SensorManager {
 
 
 
-static BoincCpuLoadManager manager;
+static BoincCpuLoadManager * manager = 0;
 
 SensorManager* getBoincCpuLoadManager() {
-        return &manager;
+
+        if (!manager) {
+                manager = new BoincCpuLoadManager; 
+        }
+        return manager;
 }
 
 #endif // _WIN32
