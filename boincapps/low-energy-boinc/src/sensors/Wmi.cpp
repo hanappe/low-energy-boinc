@@ -354,70 +354,6 @@ void Wmi::requestData(const char* WMIClass, LPCWSTR dataName, VARIANT& variant) 
 
 void Wmi::getMulti(const char* WMIClass, const std::vector<LPCWSTR> & props, std::map<LPCWSTR, std::vector<VARIANT> > & res)
 {
-	// Use the IWbemServices pointer to make requests of WMI ----
-	static const bstr_t WQL = bstr_t("WQL");
-	static const bstr_t SELECT_FROM = bstr_t("SELECT * FROM ");
-
-	IEnumWbemClassObject *enumerator = 0;
-	IWbemClassObject * object = 0;
-
-	HRESULT result = services->ExecQuery(WQL,
-		SELECT_FROM + bstr_t(WMIClass),
-		WBEM_FLAG_RETURN_IMMEDIATELY,
-		NULL,
-		&enumerator
-	);
-
-	if (FAILED(result))
-    {
-        std::cout << "Query for operating system name failed."
-            << " Error code = 0x" 
-            << std::hex << result << std::endl;
-        services->Release();
-        locator->Release();
-        CoUninitialize();
-
-		//TODO return valid error
-
-        return;
-    }
-
-	//Prepare the results array
-	res.clear();
-
-	IWbemClassObject *pclsObj;
-    ULONG uReturn = 0;
-   
-    while (enumerator)
-    {
-        result = enumerator->Next(WBEM_INFINITE, 1, 
-            &pclsObj, &uReturn);
-
-        if(0 == uReturn)
-        {
-            break;
-        }
-
-        VARIANT vtProp;
-
-        // Get the value of the Name property
-        result = pclsObj->Get(L"LoadPercentage", 0, &vtProp, 0, 0);
-        //std::wcout << "LoadPercentage : " << vtProp.iVal << std::endl;
-        VariantClear(&vtProp);
-
-        pclsObj->Release();
-    }
-
-	if (enumerator)
-		enumerator->Release();
-	if (object)
-		object->Release();
-
-}
-
-
-void Wmi::getMulti2(const char* WMIClass, const std::vector<LPCWSTR> & props, std::map<LPCWSTR, std::vector<VARIANT> > & res)
-{
 	IEnumWbemClassObject *enumerator = 0;
 	IWbemClassObject * object = 0;
 
@@ -468,7 +404,7 @@ void Wmi::getMulti2(const char* WMIClass, const std::vector<LPCWSTR> & props, st
 		for (std::vector<LPCWSTR>::const_iterator i = props.begin(); i != props.end(); ++i) {
 			result = object->Get((*i), 0, &variant, 0, 0);
 			if (result == WBEM_S_NO_ERROR) {
-				//Variant::Print(variant);
+				Variant::Print(variant);
 				res[(*i)].push_back(variant);
 			}
 			//results.push_back((*i), VARIANT(variant));
@@ -488,6 +424,72 @@ void Wmi::getMulti2(const char* WMIClass, const std::vector<LPCWSTR> & props, st
 		//std::wcout << "<ITER> PercentProcessorTimeC: " << vtProp.uVal <<std::endl;
 		// Use it
 		*/
+    }
+
+	if (enumerator)
+		enumerator->Release();
+	if (object)
+		object->Release();
+	
+}
+
+void Wmi::getCpuInfo(long long & cpuload, long long & cpufrequency)
+{
+	cpuload = 0;
+	cpufrequency = 0;
+
+	IEnumWbemClassObject *enumerator = 0;
+	IWbemClassObject * object = 0;
+
+	// Use the IWbemServices pointer to make requests of WMI ----
+	static const bstr_t WQL = bstr_t("WQL");
+
+	HRESULT result = services->ExecQuery(WQL,
+		bstr_t("SELECT LoadPercentage, CurrentClockSpeed FROM Win32_Processor"),
+		WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY,
+		NULL,
+		&enumerator
+	);
+
+	//std::cout << "result:" << result << std::endl;
+
+	if (FAILED(result))
+    {
+        std::cout << "Query for operating system name failed."
+            << " Error code = 0x" 
+            << std::hex << result << std::endl;
+        services->Release();
+        locator->Release();
+        CoUninitialize();
+
+		//TODO return valid error
+        return;
+    }
+
+
+	VARIANT variant;
+	ULONG uReturn;
+	while (1)
+    {
+        result = enumerator->Next(WBEM_INFINITE, 1, &object, &uReturn);
+
+        if(0 == uReturn) {
+            break;
+        }
+
+		VariantInit(&variant);
+
+		result = object->Get(L"LoadPercentage", 0, &variant, 0, 0);
+		if (result == WBEM_S_NO_ERROR) {
+				Variant::Print(variant);
+				cpuload = variant.iVal;
+		}
+
+		result = object->Get(L"CurrentClockSpeed", 0, &variant, 0, 0);
+		if (result == WBEM_S_NO_ERROR) {
+				Variant::Print(variant);
+				cpufrequency = variant.iVal;
+		}
     }
 
 	if (enumerator)
@@ -551,6 +553,8 @@ long long Wmi::getTotalCpuLoad()
 	return v.iVal;
 }
 
+
+
 long long Wmi::getEachCpuLoad() //TODO, not really implemente
 {
 	std::vector<LPCWSTR> properties;
@@ -560,8 +564,8 @@ long long Wmi::getEachCpuLoad() //TODO, not really implemente
 	properties.push_back(L"PercentProcessorTime");
 				
 	std::map<LPCWSTR, std::vector<VARIANT> > res;
-	//m_wmi_query->getMulti2("Win32_PerfRawData_PerfOS_Processor", properties, res);
-	this->getMulti2("Win32_PerfFormattedData_PerfOS_Processor", properties, res);
+	//m_wmi_query->getMulti("Win32_PerfRawData_PerfOS_Processor", properties, res);
+	
 	return 0;
 }
 
@@ -650,90 +654,6 @@ long long Wmi::getBoincProcessId()
 	return proc_id;
 }
 
-bool Wmi::getProcTimeAndTimeStamp(long long processId, VARIANT& proc, VARIANT& time)
-{
-	IEnumWbemClassObject *enumerator = 0;
-	IWbemClassObject * object = 0;
-
-	// Use the IWbemServices pointer to make requests of WMI ----
-	static const bstr_t WQL = bstr_t("WQL");
-	//static const bstr_t QUERY = bstr_t("Select * from Win32_PerfRawData_PerfProc_Process where IDProcess='") + bstr_t(processId) + bstr_t("'");
-	//static const bstr_t QUERY = bstr_t("Select * from Win32_PerfRawData_PerfProc_Process where IDProcess=") + bstr_t(processId);
-	//static const bstr_t QUERY = bstr_t("Select * from Win32_PerfRawData_PerfProc_Process where IDProcess=2804");
-	//static const bstr_t QUERY = bstr_t("Select * from Win32_PerfFormattedData_PerfProc_Process where IDProcess=2896");
-	static const bstr_t QUERY = bstr_t("Select * from Win32_PerfFormattedData_PerfProc_Process where CreatingProcessID='") + bstr_t(processId) + bstr_t("'");
-
-	std::wcout << L"getProcTimeAndTimeStamp: " << QUERY << std::endl;
-
-	HRESULT result = services->ExecQuery(WQL,
-		QUERY,
-		WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY,
-		NULL,
-		&enumerator
-	);
-
-	if (FAILED(result))
-    {
-        std::cout << "Query for operating system name failed."
-            << " Error code = 0x" 
-            << std::hex << result << std::endl;
-        services->Release();
-        locator->Release();
-        CoUninitialize();
-
-		//TODO return valid error
-
-        return 0;
-    }
-
-	VariantInit(&proc);
-	VariantInit(&time);
-
-	HRESULT result_proc = -1;
-	HRESULT result_time = -1;
-
-	//Temp
-	VARIANT procB;
-	VariantInit(&procB);
-	VARIANT procC;
-	VariantInit(&procC);
-
-	ULONG uReturn;
-	for(;;) {
-		HRESULT result = enumerator->Next(WBEM_INFINITE, 1, &object, &uReturn);
-		if(uReturn == 0) {
-			break;
-		}
-
-		result_proc = object->Get(L"PercentProcessorTime", 0, &proc, 0, 0);
-		result_proc = object->Get(L"PercentUserTime", 0, &procB, 0, 0);
-		result_proc = object->Get(L"PercentPrivilegedTime", 0, &procC, 0, 0);
-		result_time = object->Get(L"TimeStamp_Sys100NS", 0, &time, 0, 0);
-
-		// Write all variants in file
-		//Variant::WriteInFile("processes.txt", variants);
-		std::cout << "PercentProcessorTime: ";
-		Variant::Print(proc);
-		std::cout << std::endl;
-		std::cout << "PercentUserTime: ";
-		Variant::Print(procB);
-		std::cout << std::endl;
-		std::cout << "PercentPrivilegedTime: ";
-		Variant::Print(procC);
-		std::cout << std::endl;
-		std::cout << "TimeStamp_Sys100NS: ";
-		Variant::Print(time);
-		std::cout << std::endl;
-	}
-
-	
-	if (enumerator)
-		enumerator->Release();
-	if (object)
-		object->Release();
-
-	return (SUCCEEDED(result_proc) && SUCCEEDED(result_time));
-}
 
 long long Wmi::getBoincCpuLoad()
 {
@@ -1193,70 +1113,6 @@ void Wmi::printAllProcess()
 		enumerator->Release();
 	if (object)
 		object->Release();
-}
-
-std::map<BSTR, BSTR> Wmi::getLoggedUsersId()
-{
-	IEnumWbemClassObject *enumerator = 0;
-	IWbemClassObject * object = 0;
-
-	// Use the IWbemServices pointer to make requests of WMI ----
-	static const bstr_t WQL = bstr_t("WQL");
-	static const bstr_t SELECT_FROM = bstr_t("SELECT * FROM ");
-
-	HRESULT result = services->ExecQuery(WQL,
-		bstr_t("Select * from Win32_Process"),
-		WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY,
-		NULL,
-		&enumerator
-	);
-
-	if (FAILED(result))
-    {
-        std::cout << "Query for operating system name failed."
-            << " Error code = 0x" 
-            << std::hex << result << std::endl;
-        services->Release();
-        locator->Release();
-        CoUninitialize();
-
-		//TODO return valid error
-
-        std::map<BSTR, BSTR>();
-    }
-
-	std::map<BSTR, BSTR> res;
-
-	VARIANT vUserName;
-	VARIANT vUserId;
-
-	ULONG uReturn;
-	for(;;) {
-		result = enumerator->Next(WBEM_INFINITE, 1, &object, &uReturn);
-		if(0 == uReturn) {
-			break;
-		}
-
-		VariantInit(&vUserName);
-		VariantInit(&vUserId);
-
-		result = object->Get(L"Name", 0, &vUserName, 0, 0);
-		result = object->Get(L"LogonId", 0, &vUserId, 0, 0);
-
-		std::vector<VARIANT> list;
-		list.push_back(vUserName);
-		list.push_back(vUserId);
-
-		//Variant::Print(list);
-		res[vUserName.bstrVal] = vUserId.bstrVal;
-	}
-
-	if (enumerator)
-		enumerator->Release();
-	if (object)
-		object->Release();
-
-	return res;
 }
 
 void Wmi::getMsAcpi()

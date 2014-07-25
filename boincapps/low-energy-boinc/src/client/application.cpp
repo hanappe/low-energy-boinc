@@ -86,7 +86,7 @@ int main(int, char**) {
         if (standalone) {
                 std::cout << "boinc app is standalone!" << std::endl;
         } else {
-                std::cout << "not standalone ! \o/" << std::endl;
+                std::cout << "not standalone !" << std::endl;
         }
 
 

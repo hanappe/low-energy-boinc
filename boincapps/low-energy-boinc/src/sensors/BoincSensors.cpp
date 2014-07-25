@@ -243,7 +243,7 @@ struct BoincSensorsManager : SensorManager {
                 time_t t = Datapoint::get_current_time();
                 if (t < m_update_time + m_update_period) return;
                 m_update_time = t;
-                long rounded_t = (t / m_update_period) * m_update_period;
+                time_t rounded_t = (t / m_update_period) * m_update_period;
 
                 CC_STATE cc_state;
                 if (m_boinc_rpc.get_state(cc_state) != 0) {

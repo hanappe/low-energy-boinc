@@ -54,6 +54,13 @@ struct CpuLoadSensor : Sensor {
         }	
 };
 
+struct CpuFrequencySensor : Sensor {
+		CpuFrequencySensor() {
+                m_name = "cpufrequency";
+                m_description = "Cpu Frequency";
+		}
+};
+
 // Send the cpu load in range [0.0f - 1.0f]
 
 struct CpuLoadManager : SensorManager {
@@ -63,7 +70,8 @@ struct CpuLoadManager : SensorManager {
         long m_ncpus;
         long m_clk_tck;
         CpuLoadSensor m_machine;
-        int m_update_period;
+        CpuFrequencySensor m_frequency;
+		int m_update_period;
         time_t m_update_time;
         time_t m_record_time;
 
@@ -104,34 +112,39 @@ struct CpuLoadManager : SensorManager {
                 }
 
                 sensors.push_back(&m_machine);
+				sensors.push_back(&m_frequency);
         }
 
         void update_sensors() {
 				
                 if (m_error) return;
 
-				
                 time_t t = Datapoint::get_current_time();
 				
                 if (t < m_update_time + m_update_period) return;
                 m_update_time = t;
-                long rounded_t = (t / m_update_period) * m_update_period;
+                time_t rounded_t = (t / m_update_period) * m_update_period;
 				
-				const long long cpu_load = Wmi::GetInstance()->getTotalCpuLoad();
-
-
                 if (m_record_time > 0) {
 
+						long long cpu_load; 
+						long long cpu_frequency;
+
+						Wmi::GetInstance()->getCpuInfo(cpu_load, cpu_frequency);
+						
 						double cpu_load_ratio = 0;
 						if (cpu_load > 0) {
 							cpu_load_ratio = (static_cast<double>(cpu_load) / 100.0);
 						}
 
+                        m_machine.m_datapoints.push_back(Datapoint(rounded_t, cpu_load_ratio));
+						m_frequency.m_datapoints.push_back(Datapoint(rounded_t, static_cast<double>(cpu_frequency)));
+						
 						if (debug) {
 							std::cout << "CpuLoad: " << cpu_load << " " << cpu_load_ratio << std::endl;
+							std::cout << "CpuFrequency: " << cpu_frequency << " " << std::endl;
 						}
-                        m_machine.m_datapoints.push_back(Datapoint(rounded_t, cpu_load_ratio));
-                }
+				}
 				m_record_time = t;
         }
 };
@@ -273,10 +286,10 @@ static CpuLoadManager * manager;
 
 SensorManager* getCpuLoadManager() {
 
-        if (!manager) {
-                manager = new CpuLoadManager;
-        }
-        
+		if (!manager) {
+				manager = new CpuLoadManager;
+		}
+
         return manager;
 }
 

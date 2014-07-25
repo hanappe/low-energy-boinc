@@ -84,15 +84,18 @@ struct BoincUserCpuLoadManager : SensorManager {
                 time_t t = Datapoint::get_current_time();
                 if (t < m_update_time + m_update_period) return;
                 m_update_time = t;
-                long rounded_t = (t / m_update_period) * m_update_period;
+                time_t rounded_t = (t / m_update_period) * m_update_period;
 				
-				long long boinc_cpu_load;
-				long long user_cpu_load;
 
-				Wmi::GetInstance()->getBoincAndUserCpuLoad(boinc_cpu_load, user_cpu_load);
-
+	
+				
                 if (m_record_time > 0) {
-						
+
+						long long boinc_cpu_load;
+				        long long user_cpu_load;
+
+						Wmi::GetInstance()->getBoincAndUserCpuLoad(boinc_cpu_load, user_cpu_load);
+
 						double boinc_cpu_load_ratio = 0;
 						if (boinc_cpu_load > 0) {
 							boinc_cpu_load_ratio = (static_cast<double>(boinc_cpu_load) / 100.0);
@@ -105,6 +108,7 @@ struct BoincUserCpuLoadManager : SensorManager {
 
 						m_boinc_sensor.m_datapoints.push_back(Datapoint(rounded_t, boinc_cpu_load_ratio));
 						m_user_sensor.m_datapoints.push_back(Datapoint(rounded_t, user_cpu_load_ratio));
+						
 						if (debug) {
 								std::cout << "BoincCpuLoad: " << boinc_cpu_load_ratio << std::endl;
 								std::cout << "UserCpuLoad: " << user_cpu_load_ratio << std::endl;
