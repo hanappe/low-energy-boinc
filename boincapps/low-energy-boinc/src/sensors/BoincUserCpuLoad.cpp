@@ -38,7 +38,7 @@ struct BoincCpuLoadSensor : Sensor {
 
 struct UserCpuLoadSensor : Sensor {
         UserCpuLoadSensor() {
-                m_name = "usercpuload";
+                m_name = "userscpuload";
                 m_description = "CPU load of all USER processes";
         }
 };
