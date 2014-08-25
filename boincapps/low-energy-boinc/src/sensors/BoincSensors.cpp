@@ -128,14 +128,14 @@ namespace {
 	}
 
 	static void set_current_dir(const std::string & dirpath) {
-                std::cerr << "set_current_dir:before: " << get_current_dir() << endl;
+                //std::cerr << "set_current_dir:before: " << get_current_dir() << endl;
                 if( !SetCurrentDirectory(dirpath.data()))
                         {
                                 std::cerr << "set_current_dir failed." <<  GetLastError() << endl;
                                 return;
-			}
+				}
                 
-                std::cerr << "set_current_dir:after: " << get_current_dir() << endl;
+                //std::cerr << "set_current_dir:after: " << get_current_dir() << endl;
 	}
 
 }

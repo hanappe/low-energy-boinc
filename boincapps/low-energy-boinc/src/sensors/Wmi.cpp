@@ -404,7 +404,7 @@ void Wmi::getMulti(const char* WMIClass, const std::vector<LPCWSTR> & props, std
 		for (std::vector<LPCWSTR>::const_iterator i = props.begin(); i != props.end(); ++i) {
 			result = object->Get((*i), 0, &variant, 0, 0);
 			if (result == WBEM_S_NO_ERROR) {
-				Variant::Print(variant);
+				//Variant::Print(variant);
 				res[(*i)].push_back(variant);
 			}
 			//results.push_back((*i), VARIANT(variant));
@@ -481,13 +481,13 @@ void Wmi::getCpuInfo(long long & cpuload, long long & cpufrequency)
 
 		result = object->Get(L"LoadPercentage", 0, &variant, 0, 0);
 		if (result == WBEM_S_NO_ERROR) {
-				Variant::Print(variant);
+				//Variant::Print(variant);
 				cpuload = variant.iVal;
 		}
 
 		result = object->Get(L"CurrentClockSpeed", 0, &variant, 0, 0);
 		if (result == WBEM_S_NO_ERROR) {
-				Variant::Print(variant);
+				//Variant::Print(variant);
 				cpufrequency = variant.iVal;
 		}
     }
@@ -663,7 +663,7 @@ long long Wmi::getBoincCpuLoad()
 	const long long num_core = NumCore();
 
 	const long long processId = getBoincProcessId();
-	std::cout << "Boinc ProcessId: " << processId << std::endl;
+	//std::cout << "Boinc ProcessId: " << processId << std::endl;
 	
 	if (!processId) {
 		return 0;

@@ -16,7 +16,7 @@
 
 using namespace std;
 
-static const bool debug = true;
+static const bool debug = false;
 static bool signaled = false;
 
 static void signal_handler(int signum) {
@@ -143,25 +143,45 @@ int main(int, char**) {
                 boinc_finish(err);
         }
 
-        double t0 = boinc_elapsed_time();
+		//boinc_sleep(2);
+
+        double t0 = boinc_elapsed_time(); // Boinc documentation: "to get elapsed time since start of episode"
         double t1 = t0;
         long start_milestone = get_milestone();
-        boinc_fraction_done((seconds * start_milestone) / (seconds * milestones));
+
+		const double fraction_done_at_start = (seconds * start_milestone) / (seconds * milestones);
+		// Boinc documentation: "the fraction_done argument is an estimate of the workunit fraction complete (from 0 to 1)"
+        boinc_fraction_done(fraction_done_at_start);
+
+		if (debug) {
+				std::cout << "fraction_done_at_start: " << fraction_done_at_start <<  std::endl;
+		}
+		
         Sensors::initManagers();
 
         for (long i = start_milestone; i < milestones; i++) {
-                if (debug) std::cout << "in for loop milestone" << std::endl;
                 
+				if (debug) {
+					std::cout << "i: " << i << std::endl;
+					std::cout << "start_milestone: " << start_milestone << " milestones: " << milestones << std::endl;	
+				}
+
                 save_milestone(i);
                 
-                while ((seconds * start_milestone) + (t1 - t0) < (seconds * (i + 1))) {
+                while ( ((seconds * start_milestone) + (t1 - t0)) < (seconds * (i + 1))) {
                         if (signaled) break;
 
-                        const double fraction_done = (seconds * start_milestone) + (t1 - t0) / (seconds * milestones);
+                        const double fraction_done = ((seconds * start_milestone) + (t1 - t0))  / (seconds * milestones);
+						//const double fraction_done_bis = start_milestone + ( (t1 - t0) / (seconds * milestones));
+                        
                         boinc_fraction_done(fraction_done);
                         
-                        if (debug) std::cout << "fraction done: " << fraction_done << " milestones: " << (t1 - t0) << " t1: " << t1 << " t0: " << t0 << std::endl;
-                        Sensors::update();
+                        if (debug) {
+							std::cout << "fraction done: " << fraction_done << " (t1 - t0): " << (t1 - t0) << " t1: " << t1 << " t0: " << t0 << std::endl;
+							//std::cout << "fraction done bis: " << fraction_done_bis << std::endl;
+						}
+
+						Sensors::update();
 
                         while (true) {
                                 if (signaled) {
@@ -199,7 +219,7 @@ int main(int, char**) {
         
         /*
           
-        // Temp dead code, often use to perfom some tests
+        // Temp dead code, sometimes used to perfom some tests
         
         const int mymilestones = 6;
         const int mytime = 20;// 2 * 60; //in sec
@@ -219,8 +239,12 @@ int main(int, char**) {
         
         if (!fout) {
                 std::cerr << "ofstream out: can't open: " << out_s << endl;
-                if (debug) std::cout << "ofstream out: can't open: " << out_s << endl;
-                boinc_finish(-1);
+                
+				if (debug) {
+					std::cout << "ofstream out: can't open: " << out_s << endl;
+				}
+
+				boinc_finish(-1);
         }
 
         fprintf (fout, "%d %f\n", milestones, seconds);

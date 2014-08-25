@@ -35,7 +35,7 @@ void Sensors::initManagers() {
 		#ifdef _WIN32
                 managers.push_back(getArduinoTempManager());
                 managers.push_back(getBoincUserCpuLoadManager());
-                managers.push_back(getGhostManager());
+                //managers.push_back(getGhostManager());
 		#else // Unix
                 managers.push_back(getACPIManager());
                 managers.push_back(getBoincCpuLoadManager());
