@@ -1,257 +1,111 @@
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <csignal>
-
 #include "boinc_api.h"
 #include "filesys.h"
 #include "util.h"
 #include "Sensors.hpp"
 
-#ifdef _WIN32
-	#include "win_util.h"
-#else // Unix
-	#include <unistd.h>
-#endif
+
+#include "BoincApp.h"
+#include "RaspberryApp.h"
+#include "BenchmarkApp.h"
 
 using namespace std;
 
-static const bool debug = false;
-static bool signaled = false;
+/*
+static void InitializeManagers(const App app) {
 
-static void signal_handler(int signum) {
-        signaled = true;
+        switch (app) {
+        case Boinc: { // Linux & Windows
+                Sensors::add_sensor_manager(getBoincSensorsManager());
+                Sensors::add_sensor_manager(getCpuLoadManager());
+                Sensors::add_sensor_manager(getWattsupManager());
+                
+		#ifdef _WIN32
+                Sensors::add_sensor_manager(getArduinoTempManager());
+                Sensors::add_sensor_manager(getBoincUserCpuLoadManager());
+		#else // Unix
+                Sensors::add_sensor_manager(getACPIManager());
+                Sensors::add_sensor_manager(getBoincCpuLoadManager());
+                Sensors::add_sensor_manager(getLibSensorsManager());
+                Sensors::add_sensor_manager(getPStatesManager());
+                Sensors::add_sensor_manager(getUsersCpuLoadManager());
+                Sensors::add_sensor_manager(getTEMPerManager());
+		#endif
+       
+                break;
+        }
+        case Standalone: { // Linux & Windows
+                Sensors::add_sensor_manager(getCpuLoadManager());
+                // Remove if Wattsup is connected to a Raspberry Pi
+                Sensors::add_sensor_manager(getWattsupManager());
+                
+		#ifdef _WIN32
+                Sensors::add_sensor_manager(getArduinoTempManager());
+		#else // Unix
+                Sensors::add_sensor_manager(getACPIManager());
+                Sensors::add_sensor_manager(getBoincCpuLoadManager());
+                Sensors::add_sensor_manager(getLibSensorsManager());
+                Sensors::add_sensor_manager(getPStatesManager());
+                Sensors::add_sensor_manager(getUsersCpuLoadManager());
+                // Remove if Wattsup is connected to a Raspberry Pi
+                Sensors::add_sensor_manager(getTEMPerManager());
+		#endif
+              
+                break;
+        }
+        case RaspberryPi: { // Linux 
+                #ifdef _WIN32
+                #else // Unix
+                Sensors::add_sensor_manager(getWattsupManager());
+                Sensors::add_sensor_manager(getTEMPerManager());
+		#endif
+              
+         break;
+        }
+        default: {
+        
+                break;
+        }
 }
 
-static long get_milestone() {
+static ReleaseManagers() {
 
-	string str;
-	int err = boinc_resolve_filename_s("milestone", str);
-	if (err) {
-		std::cerr << "boinc_resolve_filename_s: milestone: " << err << endl;
-		boinc_finish(err);
-	}
-
-	
-
-	FILE * ifile = boinc_fopen(str.data(), "r");
-	if (!ifile) {
-		std::cerr << "get_milestone:can't open file: " << str << std::endl;
-		return 0;
-	}
-
-	long milestone = 0;
-	fscanf(ifile, "%d", &milestone);
-	fclose(ifile);
-
-	return milestone;
+        Sensors::releaseManagers();
 }
-
-static void save_milestone(long milestone) {
-
-        FILE * ofile = boinc_fopen("milestone_tmp", "w");
-        
-        if (!ofile) {
-                std::cerr << "FILE: can't open: milestone_tmp" << endl;
-                boinc_finish(-1);
-        }
-        fprintf (ofile, "%d\n", milestone);
-        fclose(ofile);
-        
-        string str;
-        int err = boinc_resolve_filename_s("milestone", str);
-        if (err) {
-                std::cerr << "boinc_resolve_filename_s: milestone: " << err << endl;
-                boinc_finish(err);
-        }
-        
-        err = boinc_rename("milestone_tmp", str.c_str());
-        if (err) {
-                std::cerr << "boinc_rename: milestone_tmp milestone: " << err << endl;
-                boinc_finish(err);
-        }
-}
-
-
+*/
 
 int main(int, char**) {
 
-        int err = boinc_init();
-        if (err) {
-                cerr << "boinc_init: " << err << endl;
-                boinc_finish(err);
-        }
+        bool standalone = false;
+	
+        //static const App::Type type = App::Boinc;
+        static const App::Type type = App::RaspberryPi;
+        //static const App::Type type = App::Benchmark;
 
-        int standalone = boinc_is_standalone();
-        if (standalone) {
-                std::cout << "boinc app is standalone!" << std::endl;
-        } else {
-                std::cout << "not standalone !" << std::endl;
-        }
-
-
-
-	#ifdef _WIN32
-	#else // Unix
-        if (standalone) {
-                signal(SIGINT, signal_handler);
-                signal(SIGHUP, signal_handler);
-                signal(SIGQUIT, signal_handler);
-                signal(SIGTERM, signal_handler);
-                signal(SIGPWR, signal_handler);
-        }
-        #endif
-        
-        string in_s;
-        err = boinc_resolve_filename_s("in", in_s);
-        if (err) {
-                cerr << "boinc_resolve_filename_s: in: " << err << endl;
-                if (debug) std::cout << "boinc_resolve_filename_s: in: " << err << endl;
-                boinc_finish(err);
-        }
-
-        long milestones = 0;
-        double seconds = 0;
-        
-        FILE * fin = boinc_fopen(in_s.c_str(), "r");
-        if (!fin) {
-                std::cerr << "ifstream: can't open: " << in_s << endl;
-		
-                //boinc_finish(-1);
-                milestones = 4;
-                seconds = 30;
-        } else {
-                fscanf (fin, "%d", &milestones);
-                fscanf (fin, "%lf", &seconds);
-                fclose (fin);
-        }
-		
-        if (milestones <= 0) {
-                std::cerr << "milestones: " << milestones << endl;
-                boinc_finish(-1);
-        }
-
-        if (seconds <= 10) {
-                std::cerr << "seconds: " << seconds << endl;
-                boinc_finish(-1);
-        }
-
-        string out_s;
-        err = boinc_resolve_filename_s("out", out_s);
-        if (err) {
-                cerr << "boinc_resolve_filename_s: out: " << err << endl;
-                boinc_finish(err);
-        }
-
-		//boinc_sleep(2);
-
-        double t0 = boinc_elapsed_time(); // Boinc documentation: "to get elapsed time since start of episode"
-        double t1 = t0;
-        long start_milestone = get_milestone();
-
-		const double fraction_done_at_start = (seconds * start_milestone) / (seconds * milestones);
-		// Boinc documentation: "the fraction_done argument is an estimate of the workunit fraction complete (from 0 to 1)"
-        boinc_fraction_done(fraction_done_at_start);
-
-		if (debug) {
-				std::cout << "fraction_done_at_start: " << fraction_done_at_start <<  std::endl;
-		}
-		
-        Sensors::initManagers();
-
-        for (long i = start_milestone; i < milestones; i++) {
-                
-				if (debug) {
-					std::cout << "i: " << i << std::endl;
-					std::cout << "start_milestone: " << start_milestone << " milestones: " << milestones << std::endl;	
-				}
-
-                save_milestone(i);
-                
-                while ( ((seconds * start_milestone) + (t1 - t0)) < (seconds * (i + 1))) {
-                        if (signaled) break;
-
-                        const double fraction_done = ((seconds * start_milestone) + (t1 - t0))  / (seconds * milestones);
-						//const double fraction_done_bis = start_milestone + ( (t1 - t0) / (seconds * milestones));
-                        
-                        boinc_fraction_done(fraction_done);
-                        
-                        if (debug) {
-							std::cout << "fraction done: " << fraction_done << " (t1 - t0): " << (t1 - t0) << " t1: " << t1 << " t0: " << t0 << std::endl;
-							//std::cout << "fraction done bis: " << fraction_done_bis << std::endl;
-						}
-
-						Sensors::update();
-
-                        while (true) {
-                                if (signaled) {
-                                        break;
-                                }
-                                double t2 = boinc_elapsed_time();
-                                if (t2 - t1 >= 0.5) {
-                                        break;
-                                }
-                                boinc_sleep(0.5 - (t2 - t1));
-                        }
-                        
-                        t1 = boinc_elapsed_time();
-                }
-                
-                if (signaled) break;
-                
-                ostringstream trickle;
-                Sensors::print_datapoints(trickle);
-                
-                if (trickle.tellp() > 0) {
-                        if (standalone) {
-                                cout << trickle.str() << endl;
-                        } else {
-                                err = boinc_send_trickle_up((char*) "low-energy-boinc", (char*) trickle.str().data());
-                                if (err) {
-                                        std::cerr << "boinc_send_trickle_up error: " << err << endl;
-                                        boinc_finish(err);
-                                }
-                        }
+        if (type == App::Boinc) {
+                BoincApp app;
+                app.setDebug(true);
+                if (app.isInitialized()) {
+                        app.loop();
                 }
         }
 
-        Sensors::releaseManagers();
-        
-        /*
-          
-        // Temp dead code, sometimes used to perfom some tests
-        
-        const int mymilestones = 6;
-        const int mytime = 20;// 2 * 60; //in sec
-        const double mysleeptime = mytime / double(mymilestones);
-        const double fractioninc = 100.0 / double(mymilestones);
-        for (int i = 0; i < mymilestones-1; i++) {
-        
-        boinc_sleep(mysleeptime);
-        const double fraction_done = (fractioninc * (i+1)) / 100.0;
-        //std::cout << "test: " << boinc_fraction_done(fraction_done) << std::endl;
-        boinc_fraction_done(fraction_done);
-        if (debug) std::cout << "fraction done: " << fraction_done << " i: " << i << " mysleeptime: " << mysleeptime << " fractioninc: " << fractioninc << std::endl;
-        
-        }*/
-        
-        FILE * fout = boinc_fopen(out_s.c_str(), "w");
-        
-        if (!fout) {
-                std::cerr << "ofstream out: can't open: " << out_s << endl;
-                
-				if (debug) {
-					std::cout << "ofstream out: can't open: " << out_s << endl;
-				}
+        if (type == App::RaspberryPi) {
+                RaspberryApp app;
+                app.setDebug(true);
+                if (app.isInitialized()) {
+                        app.loop();
+                }        
+        }        
 
-				boinc_finish(-1);
+        if (type == App::Benchmark) {
+                BenchmarkApp app;
+                app.setDebug(true);
+                if (app.isInitialized()) {
+                        app.loop();
+                }        
         }
-
-        fprintf (fout, "%d %f\n", milestones, seconds);
-        fclose(fout);
         
-        boinc_fraction_done(1);
-        boinc_finish(0);
+        
 }
 
 #ifdef _WIN32

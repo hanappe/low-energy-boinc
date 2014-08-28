@@ -1,79 +1,29 @@
-#include <vector>
 #include "Sensors.hpp"
-#include "Sensor.hpp"
-#include "BoincSensors.hpp"
-#include "Wattsup.hpp"
-#include "CpuLoad.hpp"
-#include "LibSensors.hpp"
 
-
-#ifdef _WIN32
-	#include "ArduinoTemp.hpp"
-	#include "BoincUserCpuLoad.hpp"
-	#include "Ghost.hpp"
-#else // Unix
-	#include "PStates.hpp"
-	#include "ACPI.hpp"
-	#include "BoincCpuLoad.hpp"
-	#include "UsersCpuLoad.hpp"
-	#include "TEMPer.hpp"
-#endif
+#include <vector>
 
 using namespace std;
 
 static const bool debug = false;
 static vector<SensorManager*> managers;
-static bool initilized = false;
 
-void Sensors::initManagers() {
-
-        if (!initilized) {
-                managers.push_back(getBoincSensorsManager());
-                managers.push_back(getCpuLoadManager());
-                managers.push_back(getWattsupManager());
-
-		#ifdef _WIN32
-                managers.push_back(getArduinoTempManager());
-                managers.push_back(getBoincUserCpuLoadManager());
-                //managers.push_back(getGhostManager());
-		#else // Unix
-                managers.push_back(getACPIManager());
-                managers.push_back(getBoincCpuLoadManager());
-                //managers.push_back(getLibSensorsManager());
-                managers.push_back(getPStatesManager());
-                managers.push_back(getUsersCpuLoadManager());
-                managers.push_back(getTEMPerManager());
-		
-		#endif
-
-                initilized = true;
-        }
-}
 void Sensors::update() {
-        
-        if (initilized) {
-                
-                size_t nmanagers = managers.size();
-                for (size_t i = 0; i < nmanagers; ++i) {
-                        if (debug)
-                                cout << managers[i]->m_name << ".update_sensors()" << endl;
-                        managers[i]->update_sensors();
-                }
-                
+        size_t nmanagers = managers.size();
+        for (size_t i = 0; i < nmanagers; ++i) {
+                if (debug)
+                        cout << managers[i]->m_name << ".update_sensors()" << endl;
+                managers[i]->update_sensors();
         }
 }
 
 void Sensors::releaseManagers() {
 
-        if (initilized) {
-                size_t nmanagers = managers.size();
-                for (size_t i = 0; i < nmanagers; ++i) {
-                        delete managers[i];
-                        managers[i] = 0;
-                }
-                managers.clear();
-                initilized = false;
+        size_t nmanagers = managers.size();
+        for (size_t i = 0; i < nmanagers; ++i) {
+                delete managers[i];
+                managers[i] = 0;
         }
+        managers.clear();
 }
 
 void Sensors::add_sensor_manager(SensorManager* m) {

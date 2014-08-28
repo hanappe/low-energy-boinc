@@ -1,0 +1,25 @@
+{
+    "account_username" : "idgf_event_25_sept_2014",
+    "account_key" : "123456-abc1-1234-abc2-123456",
+	"group" : "",
+    "datastreams":[
+        {"id" : 0, "name": "cpuload"},
+        {"id" : 0, "name": "userscpuload"},
+        {"id" : 0, "name": "usercpuload"},
+        {"id" : 0, "name": "wattsup"},
+        {"id" : 0, "name": "cpu0state0"},
+        {"id" : 0, "name": "cpu0stateN"},
+        {"id" : 0, "name": "cpu1state0"},
+        {"id" : 0, "name": "cpu1stateN"},
+        {"id" : 0, "name": "cpu2state0"},
+        {"id" : 0, "name": "cpu2stateN"},
+        {"id" : 0, "name": "cpu3state0"},
+        {"id" : 0, "name": "cpu3stateN"},
+        {"id" : 0, "name": "battery0"},
+        {"id" : 0, "name": "battery1"},
+
+        {"id" : 0, "name": "boinccpuload"},
+        {"id" : 0, "name": "cpufrequency"},
+    ],
+    "mapping": {"temperature" : ""}
+}

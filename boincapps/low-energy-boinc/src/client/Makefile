@@ -14,13 +14,14 @@ BOINC_DIR = ../../../../boinc
 CXXFLAGS += -I$(BOINC_DIR) \
 	-I$(BOINC_DIR)/api \
 	-I$(BOINC_DIR)/lib \
-	-I./../sensors
+	-I./../sensors \
+	-I./../../depends
 
 LDFLAGS = -L$(BOINC_DIR)/api \
 	-L$(BOINC_DIR)/lib \
 	-L.
 
-sensors_srcs = $(addprefix ../sensors/, Sensors.cpp \
+sensors_sources = $(addprefix ../sensors/, Sensors.cpp \
 	ACPI.cpp \
 	BoincCpuLoad.cpp \
 	BoincSensors.cpp \
@@ -36,33 +37,50 @@ sensors_srcs = $(addprefix ../sensors/, Sensors.cpp \
 	Wattsup.cpp \
 	UsersCpuLoad.cpp)
 
-application_srcs = application.cpp $(sensors_srcs)
-application_deps = ${application_srcs:%.cpp=%.d}
-application_objs = ${application_srcs:%.cpp=%.o}
-application_static_libs = libstdc++.a libusb.a libsensors.a libacpi.a
-application_ldflags = -lboinc_api -lboinc -lpthread
-depends += $(application_deps)
-objects += $(application_objs) $(application_static_libs)
-programs += application
+sensors_objects = ${sensors_sources:%.cpp=%.o}
+sensors_staticlibs = libstdc++.a libusb.a libsensors.a libacpi.a
+sensors_libs = -lboinc_api -lboinc -lpthread
 
-generated = $(programs) $(objects) $(depends) stderr.txt
+sa_trickle_sources = ../../depends/json/json.cpp standalone_trickle_up.cpp
+sa_trickle_objects = ${sa_trickle_sources:%.cpp=%.o}
+sa_trickle_libs = -lcurl
 
-all: $(depends) $(programs)
+
+application_sources = $(sa_trickle_sources) App.cpp BoincApp.cpp RaspberryApp.cpp BenchmarkApp.cpp application.cpp
+application_objects = ${application_sources:%.cpp=%.o}
+application_libs = $(sa_trickle_libs)
+
+# standalone trickle up
+
+
+standalone_sources = standalone.cpp
+standalone_objects = ${standalone_sources:%.cpp=%.o}
+
+
+#all: $(depends) $(programs)
+all: application standalone
 
 %.a:
 	ln -s `$(CXX) -print-file-name=$@`
 
-application: $(application_objs) $(application_static_libs)
-	$(CXX) $(LDFLAGS) -o $@ $^ $(application_ldflags)
+#application: $(application_objs) $(application_static_libs)
+#	$(CXX) $(LDFLAGS) -o $@ $^ $(application_ldflags)
 
-%.d: %.c
-	$(CC) -o $@ $(CFLAGS) $< -MM -MT '$@ $*.o'
+application:  $(sensors_objects) $(sensors_staticlibs) $(application_libs) $(application_objects)
+	$(CXX) $(LDFLAGS) -o $@ $^ $(sensors_libs)
 
-%.d: %.cpp
-	$(CXX) -o $@ $(CXXFLAGS) $< -MM -MT '$@ $*.o'
+#standalone:  $(sensors_objects) $(sensors_staticlibs) $(sa_trickle_objects) $(standalone_objects)
+#	$(CXX) $(LDFLAGS) -o $@ $^ $(sensors_libs) $(sa_trickle_libs)
+
+%.o: %.c
+	g++ -c $(CXXFLAGS) $^ -o $@
+
+%.o: %.cpp
+	g++ -c $(CXXFLAGS) $^ -o $@
 
 clean:
-	rm -f $(generated)
+	rm -f $(sensors_objects) $(application_objects)  stderr.txt
+
 
 ifneq ($(MAKECMDGOALS),clean)
 -include $(depends)

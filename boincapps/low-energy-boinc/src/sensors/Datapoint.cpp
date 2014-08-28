@@ -29,8 +29,7 @@
 #define isnan _isnan
 
 static struct tm *
-localtime_r (const time_t *timer, struct tm *result)
-{
+localtime_r (const time_t *timer, struct tm *result) {
 	localtime_s(result, timer);
 	return result;
 }
@@ -39,21 +38,19 @@ localtime_r (const time_t *timer, struct tm *result)
 
 
 namespace Time {
-	void print_format(std::ostream& os, const time_t& t)
-	{
+	void print_format(std::ostream& os, const time_t& t) {
 		struct tm tm;
-        localtime_r(&t, &tm);
-
+                localtime_r(&t, &tm);
+                
 		os << std::setw(4) << std::setfill('0') << (1900 + tm.tm_year)
-           << '-' << std::setw(2) << std::setfill('0') << tm.tm_mon + 1
-           << '-' << std::setw(2) << std::setfill('0') << tm.tm_mday
-           << 'T' << std::setw(2) << std::setfill('0') << tm.tm_hour
-           << ':' << std::setw(2) << std::setfill('0') << tm.tm_min
-           << ':' << std::setw(2) << std::setfill('0') << tm.tm_sec;
+                   << '-' << std::setw(2) << std::setfill('0') << tm.tm_mon + 1
+                   << '-' << std::setw(2) << std::setfill('0') << tm.tm_mday
+                   << 'T' << std::setw(2) << std::setfill('0') << tm.tm_hour
+                   << ':' << std::setw(2) << std::setfill('0') << tm.tm_min
+                   << ':' << std::setw(2) << std::setfill('0') << tm.tm_sec;
 	}
 
-	time_t  get_current()
-	{
+	time_t  get_current() {
 		return time(NULL);
 	}
 
@@ -75,10 +72,10 @@ Datapoint::Datapoint(time_t time, double value) {
 }
 
 std::ostream& operator<<(std::ostream& stream, const Datapoint& dp) {
-		Time::print_format(stream, dp.m_time);
-
-		stream  << ',';
-
+        Time::print_format(stream, dp.m_time);
+        
+        stream  << ',';
+        
         if (isnan(dp.m_value)) {
                 stream << "null";
                 return stream;
@@ -109,4 +106,3 @@ void DatapointV::push_back(const Datapoint& datapoint) {
 
         std::vector<Datapoint>::push_back(datapoint);
 }
-
