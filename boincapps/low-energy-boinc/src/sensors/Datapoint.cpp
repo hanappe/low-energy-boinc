@@ -1,13 +1,28 @@
 #include <iomanip>
+
+#ifdef _WIN32
+#include <float.h>
+//#include <cmath>
+//#include <math.h>
+
+//std::nan("string") is equivalent to std::strtod("NAN(string)", (char**)NULL).
+//http://en.cppreference.com/w/c/numeric/math/nan
+
+#define NAN std::strtod("NAN(string)", (char**)NULL)
+#else
 #include <cmath>
+#define NAN nan("")
+#endif // ifdef _WIN32
+
 #include <sstream>
 #include "Datapoint.hpp"
 
-using namespace std;
+//using namespace std;
 
 #ifdef _WIN32
 
 #define isnan _isnan
+//#define localtime localtime_s
 
 static struct tm *
 localtime_r (const time_t *timer, struct tm *result)
@@ -18,7 +33,7 @@ localtime_r (const time_t *timer, struct tm *result)
   if (local_result == NULL || result == NULL)
     return NULL;
 
-  memcpy (result, local_result, sizeof (result));
+  std::memcpy (result, local_result, sizeof (result));
   return result;
 }
 
@@ -38,19 +53,19 @@ Datapoint::Datapoint(time_t time, double value) {
         this->m_value = value;
 }
 
-void Datapoint::print_to(ostream& st) const {
+void Datapoint::print_to(std::ostream& st) const {
         struct tm tm;
         localtime_r(&m_time, &tm);
 
-        st << setw(4) << setfill('0') << (1900 + tm.tm_year)
-           << '-' << setw(2) << setfill('0') << tm.tm_mon + 1
-           << '-' << setw(2) << setfill('0') << tm.tm_mday
-           << 'T' << setw(2) << setfill('0') << tm.tm_hour
-           << ':' << setw(2) << setfill('0') << tm.tm_min
-           << ':' << setw(2) << setfill('0') << tm.tm_sec
+        st << std::setw(4) << std::setfill('0') << (1900 + tm.tm_year)
+           << '-' << std::setw(2) << std::setfill('0') << tm.tm_mon + 1
+           << '-' << std::setw(2) << std::setfill('0') << tm.tm_mday
+           << 'T' << std::setw(2) << std::setfill('0') << tm.tm_hour
+           << ':' << std::setw(2) << std::setfill('0') << tm.tm_min
+           << ':' << std::setw(2) << std::setfill('0') << tm.tm_sec
            << ',';
 
-        if (::isnan(m_value)) {
+        if (isnan(m_value)) {
                 st << "null";
                 return;
         }
@@ -72,7 +87,8 @@ DatapointV::DatapointV() {
 void DatapointV::push_back(const Datapoint& datapoint) {
         if (m_firstDatapoint) {
                 // Add a NaN at the beginning of a new data series.
-                vector<Datapoint>::push_back(Datapoint(datapoint.m_time - 1, ::nan("")));
+                //vector<Datapoint>::push_back(Datapoint(datapoint.m_time - 1, nan("") ));
+				std::vector<Datapoint>::push_back(Datapoint(datapoint.m_time - 1, NAN));
                 m_firstDatapoint = false;
         }
 

@@ -10,7 +10,7 @@ struct PStatesManager : SensorManager {
                 m_name = "PStatesManager";
         }
 
-        void add_sensors(SensorV& sensors) {
+        void add_sensors(SensorV& sensors, ErrorV& errors) {
         }
 
         void update_sensors() {
@@ -188,7 +188,7 @@ struct PStatesManager : SensorManager {
                                 }
 
                                 double value = ((double) steps - pstate->m_steps) / (t - pstate->m_steps_time);
-				value *= 0.01;
+								value *= 0.01;
                                 pstate->m_datapoints.push_back(Datapoint(rounded_time, value));
                                 pstate->m_steps_time = t;
                                 pstate->m_steps = steps;

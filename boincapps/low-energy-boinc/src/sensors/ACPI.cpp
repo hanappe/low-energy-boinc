@@ -3,6 +3,25 @@
 #include <sstream>
 #include "ACPI.hpp"
 
+#ifdef _WIN32
+
+// ACPI doesn't exist on Windows
+
+struct ACPIManager : SensorManager {
+
+        ACPIManager() {
+                m_name = "ACPIManager";
+        }
+
+        void add_sensors(SensorV& sensors, ErrorV& errors) {
+        }
+
+        void update_sensors() {
+        }
+};
+
+#else // if !_WIN32
+
 extern "C" {
 #include <libacpi.h>
 }
@@ -134,9 +153,13 @@ struct ACPIManager : SensorManager {
         }
 };
 
+#endif // end ifdef _WIN32
+
 static ACPIManager manager;
 
 SensorManager* getACPIManager() {
         return &manager;
 }
+
+
 

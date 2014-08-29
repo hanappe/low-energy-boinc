@@ -1,16 +1,22 @@
 #include <vector>
 #include "Sensors.hpp"
 #include "Sensor.hpp"
-#include "PStates.hpp"
 #include "BoincSensors.hpp"
 #include "Wattsup.hpp"
-#include "TEMPer.hpp"
-#include "BoincSensors.hpp"
 #include "CpuLoad.hpp"
-#include "BoincCpuLoad.hpp"
-#include "UsersCpuLoad.hpp"
 #include "LibSensors.hpp"
-#include "ACPI.hpp"
+
+
+#ifdef _WIN32
+	#include "windows/ArduinoTemp.hpp"
+	#include "windows/BoincUserCpuLoad.hpp"
+#else // Unix
+	#include "linux/PStates.hpp"
+	#include "linux/ACPI.hpp"
+	#include "linux/BoincCpuLoad.hpp"
+	#include "linux/UsersCpuLoad.hpp"
+	#include "linux/TEMPer.hpp"
+#endif
 
 using namespace std;
 
@@ -19,15 +25,26 @@ static vector<SensorManager*> managers;
 
 void Sensors::update() {
         if (managers.size() == 0) {
-                managers.push_back(getWattsupManager());
-                managers.push_back(getTEMPerManager());
-                managers.push_back(getPStatesManager());
-                managers.push_back(getBoincSensorsManager());
-                managers.push_back(getBoincCpuLoadManager());
-                managers.push_back(getUsersCpuLoadManager());
+
+				managers.push_back(getWattsupManager());
+				managers.push_back(getBoincSensorsManager());
                 managers.push_back(getCpuLoadManager());
                 managers.push_back(getLibSensorsManager());
-                managers.push_back(getACPIManager());
+
+				#ifdef _WIN32
+					managers.push_back(getArduinoTempManager());
+					managers.push_back(getBoincUserCpuLoadManager());
+				#else // Unix
+					managers.push_back(getBoincCpuLoadManager());
+					managers.push_back(getUsersCpuLoadManager());
+					managers.push_back(getTEMPerManager());
+					managers.push_back(getPStatesManager());
+					managers.push_back(getACPIManager());
+				#endif
+                
+                
+
+                
         }
 
         size_t nmanagers = managers.size();

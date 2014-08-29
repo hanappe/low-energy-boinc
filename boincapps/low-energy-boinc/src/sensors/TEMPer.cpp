@@ -2,23 +2,6 @@
 
 using namespace std;
 
-#ifdef _WIN32
-
-struct TEMPerManager : SensorManager {
-
-        TEMPerManager() {
-                m_name = "TEMPerManager";
-        }
-
-        void add_sensors(SensorV& sensors) {
-        }
-
-        void update_sensors() {
-        }
-};
-
-#else // !_WIN32
-
 // Based on pcsensor.c by Juan Carlos Perez
 // based on Temper.c by Robert Kavaler
 
@@ -26,7 +9,12 @@ struct TEMPerManager : SensorManager {
 #include <iomanip>
 #include <vector>
 #include <cstring>
-#include <usb.h>
+
+#ifdef _WIN32
+	//#include "libusb.h"
+#else // Unix
+	#include <usb.h>
+#endif
 
 static const bool debug = false;
 static const bool close_each_time = true;
@@ -52,6 +40,40 @@ static char init2[] = { 0x01, (char) 0x86, (char) 0xff, 0x01, 0x00, 0x00, 0x00, 
                 close(); return;                                        \
         }
 
+#ifdef _WIN32
+
+
+struct TEMPerManager : SensorManager {
+
+        TEMPerManager() {
+                m_name = "TEMPerManager";
+        }
+
+        ~TEMPerManager() {
+           
+        }
+
+        void find_tempers() {
+                
+        }
+
+        void close_tempers() {
+        }
+
+        void add_sensors(SensorV& sensors, ErrorV& errors) {
+                
+        }
+
+        void update_sensors() {
+				
+        }
+};
+
+
+#else // Unix
+
+
+
 struct TEMPerSensor : Sensor {
 
         struct usb_device* m_dev;
@@ -59,11 +81,13 @@ struct TEMPerSensor : Sensor {
         char m_read[8];
 
         TEMPerSensor(struct usb_device* dev) {
+				cout << "TEMPerSensor()" << endl;
                 m_name = "TEMPer";
                 m_description = "Temperature sensor";
                 m_dev = dev;
                 m_h = 0;
                 open();
+				cout << "TEMPerSensor() End" << endl;
         }
 
         ~TEMPerSensor() {
@@ -163,6 +187,7 @@ struct TEMPerManager : SensorManager {
         time_t m_update_time;
 
         TEMPerManager() {
+				cout << "TEMPerManager()" << endl;
                 m_name = "TEMPerManager";
                 m_error = 0;
                 m_error_reported = false;
@@ -171,6 +196,7 @@ struct TEMPerManager : SensorManager {
                 m_update_period = 900; // 15 minutes
                 m_update_time = 0;
                 usb_init();
+				cout << "TEMPerManager() End" << endl;
         }
 
         ~TEMPerManager() {
@@ -192,14 +218,18 @@ struct TEMPerManager : SensorManager {
                         return;
                 }
 
+				cout << "find_tempers" << endl;          
                 usb_find_busses();
                 usb_find_devices();
 
                 for (struct usb_bus* bus = usb_get_busses(); bus != 0; bus = bus->next) {
+						cout << "find_tempers test A" << endl;  
                         for (struct usb_device* dev = bus->devices; dev != 0; dev = dev->next) {
-                                if (!TEMPerSensor::check_vendor_and_product(dev)) continue;
+                            cout << "find_tempers test B" << endl;     
+							if (!TEMPerSensor::check_vendor_and_product(dev)) continue;
 
                                 TEMPerSensor* temper = new TEMPerSensor(dev);
+								cout << "find_tempers test C" << endl;    
                                 if (!temper->is_open()) {
                                         delete temper;
                                         continue;
@@ -231,6 +261,7 @@ struct TEMPerManager : SensorManager {
         }
 
         void update_sensors() {
+				cout << "TEMPerManager::() update_sensors" << endl;
                 time_t t = Datapoint::get_current_time();
                 if (t < m_update_time + m_update_period) return;
                 m_update_time = t;
@@ -253,7 +284,7 @@ struct TEMPerManager : SensorManager {
         }
 };
 
-#endif // _WIN32
+#endif
 
 static TEMPerManager manager;
 

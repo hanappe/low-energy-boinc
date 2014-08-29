@@ -1,10 +1,35 @@
+#include "BoincSensors.hpp"
+
 #include <vector>
 #include <unordered_map>
 #include "boinc_api.h"
 #include "gui_rpc_client.h"
-#include "BoincSensors.hpp"
 
 using namespace std;
+
+
+/*
+#ifdef _WIN32
+
+
+//TODO Remove this distinct Windows class the UNIX code should works on Windows
+
+struct BoincSensorsManager : SensorManager {
+
+        BoincSensorsManager() {
+                m_name = "BoincSensorsManager";
+        }
+
+        void add_sensors(SensorV& sensors, ErrorV& errors) {
+        }
+
+        void update_sensors() {
+        }
+};
+
+
+#else // Unix
+*/
 
 struct ResultSensor : Sensor {
         string m_project_url;
@@ -155,6 +180,9 @@ struct BoincSensorsManager : SensorManager {
         }
 };
 
+/*
+#endif // _WIN32
+*/
 static BoincSensorsManager manager;
 
 SensorManager* getBoincSensorsManager() {

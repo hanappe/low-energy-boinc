@@ -1,34 +1,10 @@
 #include "UsersCpuLoad.hpp"
 
-#ifdef _WIN32
-
-struct UsersCpuLoadManager : SensorManager {
-
-        UsersCpuLoadManager() {
-                m_name = "UsersCpuLoadManager";
-        }
-
-        void add_sensors(SensorV& sensors) {
-        }
-
-        void update_sensors() {
-        }
-};
-
-#else // !_WIN32
-
 #include <iomanip>
 #include <fstream>
 #include <sstream>
 #include <vector>
 #include <unordered_map>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <dirent.h>
-#include <pwd.h>
-#include <unistd.h>
-#include <utmpx.h>
-#include "ProcessStat.hpp"
 
 using namespace std;
 
@@ -42,6 +18,90 @@ static const string ERRORS[] = {
 #define ERROR_BAD_CLK_TCK 3
         "bad clock tick",
 };
+
+#ifdef _WIN32
+
+#include "Wmi.h"
+
+struct UsersCpuLoadSensor : Sensor {
+        UsersCpuLoadSensor() {
+                m_name = "userscpuload";
+                m_description = "CPU load of logged user"; // Assuming there is just one user logged
+        }
+};
+
+struct UsersCpuLoadManager : SensorManager {
+
+		int m_error;
+        bool m_error_reported;
+        
+
+        UsersCpuLoadSensor m_sensor;
+        int m_update_period;
+        time_t m_update_time;
+        time_t m_record_time;
+        //long m_ncpus;
+        //long m_clk_tck;
+        //uid_t m_boinc_user_id;
+        //PidToStat m_stat_history;
+
+
+        UsersCpuLoadManager() : SensorManager() {
+                m_name = "BoincCpuLoadManager";
+                m_error = 0;
+                m_error_reported = false;
+                m_update_period = 5;
+                m_update_time = 0;
+                m_record_time = 0;
+        }
+
+		
+
+        void add_sensors(SensorV& sensors, ErrorV& errors) {
+			if (m_error) {
+				if (!m_error_reported) {
+						errors.push_back(Error(__FILE__, m_error, ERRORS[m_error]));
+						m_error_reported = true;
+				}
+				return;
+            }
+
+            update_sensors();
+            sensors.push_back(&m_sensor);
+		}
+
+        void update_sensors() {
+				if (m_error) return;
+
+                time_t t = Datapoint::get_current_time();
+                if (t < m_update_time + m_update_period) return;
+                m_update_time = t;
+                long rounded_t = (t / m_update_period) * m_update_period;
+
+				const long long user_cpu_load = Wmi::GetInstance()->getUserCpuLoad();
+				std::cout << "USER CPU LOAD: " << user_cpu_load << std::endl;
+
+                if (m_record_time > 0) {
+                        double boinc_cpu_load_ratio = (user_cpu_load / 100.0f);
+                        m_sensor.m_datapoints.push_back(Datapoint(rounded_t, boinc_cpu_load_ratio));
+                }
+
+                m_record_time = t;
+        }
+};
+
+#else // !_WIN32
+
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <pwd.h>
+#include <unistd.h>
+#include <utmpx.h>
+#include "ProcessStat.hpp"
+
+
 
 typedef unordered_map<int, ProcessStat> PidToStat;
 typedef unordered_map<int, bool> UserToLogged;

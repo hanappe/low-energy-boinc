@@ -1,8 +1,14 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
-#include <sys/select.h>
 #include "FDSet.hpp"
+
+/*
+#ifdef _WIN32
+	#include <WinSock2.h>
+#else
+	#include <sys/select.h>
+#endif // end ifdef _WIN32
 
 using namespace std;
 
@@ -115,4 +121,4 @@ namespace fdset {
         }
 
 }
-
+*/

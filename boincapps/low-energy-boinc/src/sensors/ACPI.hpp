@@ -5,4 +5,4 @@
 
 extern SensorManager* getACPIManager();
 
-#endif
+#endif // __ACPI_hpp__

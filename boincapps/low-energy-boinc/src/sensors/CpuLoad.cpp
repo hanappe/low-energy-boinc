@@ -1,29 +1,19 @@
 #include "CpuLoad.hpp"
 
-using namespace std;
-
-#ifdef _WIN32
-
-struct CpuLoadManager : SensorManager {
-
-        CpuLoadManager() {
-                m_name = "CpuLoadManager";
-        }
-
-        void add_sensors(SensorV& sensors) {
-        }
-
-        void update_sensors() {
-        }
-};
-
-#else // !_WIN32
-
-#include <iomanip>
 #include <fstream>
 #include <sstream>
 #include <vector>
-#include <unistd.h>
+
+#ifdef _WIN32
+	#include "Wmi.h"
+#else //UNIX
+	#include <iomanip>
+	#include <unistd.h>
+#endif
+
+using namespace std;
+
+static const bool debug = true;
 
 static const string ERRORS[] = {
 #define ERROR_NO_ERROR 0
@@ -37,6 +27,138 @@ static const string ERRORS[] = {
 #define ERROR_PROC_STAT_CONTENTS 4
         "bad proc stat contents",
 };
+
+
+#ifdef _WIN32
+
+
+struct CpuStat {
+        string cpu;
+        long long load_percentage;
+
+        bool read(istream& s) {
+				s >> cpu
+                >> load_percentage;
+				return !(s.rdstate() & ifstream::failbit);
+        }
+
+        void print_to(ostream& s) {
+                s << cpu << load_percentage;
+        }
+};
+
+struct CpuLoadSensor : Sensor {
+		CpuLoadSensor() {
+                m_name = "cpuload";
+                m_description = "Total CPU load";
+        }	
+};
+
+// Send the cpu load in range [0.0f - 1.0f]
+
+struct CpuLoadManager : SensorManager {
+
+		int m_error;
+        bool m_error_reported;
+        long m_ncpus;
+        long m_clk_tck;
+        CpuLoadSensor m_machine;
+        int m_update_period;
+        time_t m_update_time;
+        time_t m_record_time;
+        CpuStat m_stat;
+
+        CpuLoadManager() {
+                m_name = "CpuLoadManager";
+                m_error = 0;
+                m_error_reported = false;
+				
+				std::vector<LPCWSTR> properties;
+				properties.push_back(L"NumberOfCores");
+				properties.push_back(L"MaxClockSpeed");
+				
+				std::map<LPCWSTR, std::vector<VARIANT> > res;
+				Wmi::GetInstance()->getMulti2("Win32_Processor", properties, res);
+
+				std::map<LPCWSTR, std::vector<VARIANT> >::iterator i;
+				i = res.find(L"NumberOfCores");
+				if (i != res.end() ) {
+					m_ncpus = res[L"NumberOfCores"][0].iVal;
+				}
+				
+				if (m_ncpus <= 0) {
+                        m_error = ERROR_BAD_NUMBER_OF_CPUS;
+                }
+				i = res.find(L"MaxClockSpeed");
+				if (i != res.end()) {
+					m_clk_tck = res[L"MaxClockSpeed"][0].iVal;
+				}
+				
+				if (m_clk_tck <= 0) {
+                        m_error = ERROR_BAD_CLK_TCK;
+                }
+				
+				if (debug) {
+					std::cout << "CpuLoadManager() NumberOfCores: " << m_ncpus << " MaxClockSpeed: " << m_clk_tck << std::endl; 
+				}
+
+                m_update_period = 5;
+                m_update_time = 0;
+                m_record_time = 0;
+        }
+
+		void add_sensors(SensorV& sensors, ErrorV& errors) {
+                update_sensors();
+
+                if (m_error) {
+                        if (!m_error_reported) {
+                                errors.push_back(Error(__FILE__, m_error, ERRORS[m_error]));
+                                m_error_reported = true;
+                        }
+                        return;
+                }
+
+                sensors.push_back(&m_machine);
+        }
+
+        void update_sensors() {
+				
+                if (m_error) return;
+
+				
+                time_t t = Datapoint::get_current_time();
+				
+                if (t < m_update_time + m_update_period) return;
+                m_update_time = t;
+                long rounded_t = (t / m_update_period) * m_update_period;
+				
+				//std::cout << "CpuLoadManager::update_sensors time_t: " << t << std::endl;
+
+				const long long load_percentage = Wmi::GetInstance()->getTotalCpuLoad();
+
+				CpuStat stat;
+				stat.load_percentage = load_percentage;
+
+                if (m_record_time > 0) {
+						float ratio = load_percentage / 100.0f;
+						if (debug) {
+							std::cout << "CpuLoad: " << load_percentage << " " << ratio << std::endl;
+						}
+                        m_machine.m_datapoints.push_back(Datapoint(rounded_t, ratio));
+                }
+				
+				
+				Wmi::GetInstance()->printAllProcess();
+
+
+				m_record_time = t;
+                m_stat = stat;
+        }
+};
+
+#else // !_WIN32
+
+
 
 struct CpuStat {
         string cpu;
@@ -165,7 +287,7 @@ struct CpuLoadManager : SensorManager {
         }
 };
 
-#endif // _WIN32
+#endif // end ifdef _WIN32
 
 static CpuLoadManager manager;
 

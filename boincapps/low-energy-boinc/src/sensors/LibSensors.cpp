@@ -1,7 +1,25 @@
 #include <iostream>
 #include <cstring>
-#include <sensors/sensors.h>
 #include "LibSensors.hpp"
+
+#ifdef _WIN32
+
+struct LibSensorsManager : SensorManager {
+
+        LibSensorsManager() {
+                m_name = "LibSensorsManager";
+        }
+
+        void add_sensors(SensorV& sensors, ErrorV& errors) {
+        }
+
+        void update_sensors() {
+        }
+};
+
+#else // Unix
+
+#include <sensors/sensors.h>
 
 using namespace std;
 
@@ -126,9 +144,13 @@ struct LibSensorsManager : SensorManager {
         }
 };
 
+#endif //ifdef _WIN32
+
 static LibSensorsManager manager;
 
 SensorManager* getLibSensorsManager() {
         return &manager;
 }
+
+
 
