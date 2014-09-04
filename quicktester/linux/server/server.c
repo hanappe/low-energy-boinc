@@ -8,150 +8,18 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <pthread.h>
+#include "meter.h"
 #include "log.h"
 
 /* -------------------------------------------------*/
 
 double get_time()
 {
-        return 0.0;
-}
-
-/* -------------------------------------------------*/
-
-static int _meters_continue = 1;
-
-typedef struct _meter_t {
-        int id;
-        double watt;
-        pthread_t thread;
-} meter_t;
-
-meter_t* new_meter(int id)
-{
-        meter_t* meter = (meter_t*) malloc(sizeof(meter_t));
-        if (meter == NULL) {
-                log_err("new_meter: out of memory");
-                return NULL;
-        }
-        memset(meter, 0, sizeof(meter_t));
-        meter->id = id;
-        return meter;
-}
-
-void delete_meter(meter_t* meter)
-{
-        if (meter) {
-                free(meter);
-        }
-}
-
-double meter_get_watt(meter_t* meter)
-{
-        // TODO: use mutex?
-        return meter->watt;
-}
-
-double meter_read(meter_t* meter)
-{
-        sleep(1);
-        return 20.0;
-}
-
-int meter_update(meter_t* meter)
-{
-        meter->watt = meter_read(meter);
-        return 0;
-}
-
-void* meter_run(void* ptr)
-{
-        meter_t* meter = (meter_t*) ptr;
-
-        while (_meters_continue) {
-                meter_update(meter);
-        } 
-
-        return NULL;
-}
-
-/* -------------------------------------------------*/
-
-#define MAX_METERS 10
-
-static meter_t* _meters[MAX_METERS];
-static int _meters_count = 0;
-
-meter_t* meters_get(int meter_id)
-{
-        if ((meter_id < 0) || (meter_id >= MAX_METERS))
-                return NULL;
-        return _meters[meter_id];
-}
-
-int meters_add()
-{
-        pthread_attr_t attr;
-        int ret;
-
-        if (_meters_count >= MAX_METERS) {
-                log_err("meters_add: maximum number of meters reached");                
-                return -1;
-        }
-
-        meter_t* meter = new_meter(_meters_count);
-        if (meter == NULL) {
-                return -1;
-        }
-
-        ret = pthread_attr_init(&attr);
-        if (ret != 0) {
-                log_err("meters_add: pthread_attr_init failed");
-                delete_meter(meter);
-                return -1;
-        }
-                
-        ret = pthread_create(&meter->thread, &attr, &meter_run, meter);
-        if (ret != 0) {
-                log_err("meters_add: pthread_create failed");
-                delete_meter(meter);
-                return -1;
-        }
-
-        _meters[_meters_count++] = meter;
-
-        return meter->id;
-}
-
-void meters_stop()
-{
-        _meters_continue = 0;
-
-        for (int i = 0; i < _meters_count; i++) {
-                void *retval;
-                pthread_join(_meters[i]->thread, &retval);
-        }
-}
-
-int meters_init()
-{
-        for (int i = 0; i < MAX_METERS; i++)
-                _meters[i] = NULL;
-
-        for (int i = 0; i < 5; i++) {
-                // TODO: scan USB bus
-                int ret = meters_add();
-                if (ret < 0) {
-                        return -1;
-                }
-        }
-        return 0;
-}
-
-int meters_count()
-{
-        return _meters_count;
+        struct timeval tv;
+        gettimeofday(&tv, 0);
+        return 1.e-6 * tv.tv_usec + tv.tv_sec;
 }
 
 /* -------------------------------------------------*/
@@ -370,10 +238,8 @@ int host_experiment_update(host_t* host, message_t* m)
         
         experiment_t* e = host->cur_experiment;
         meter_t* meter = host->meter;
-        double watt = meter_get_watt(meter);   // TODO: use mutex?
+        float energy = meter_get_energy(meter);
         double t = get_time();
-        double last_t = e->time_last;
-        double energy = watt * (t - last_t);
         
         e->energy += energy;
         e->energy_idle += e->cpu_load_idle * energy;
