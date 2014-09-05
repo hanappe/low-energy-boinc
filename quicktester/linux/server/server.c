@@ -86,6 +86,9 @@ int message_parse(message_t* m, char** tokens, int num_tokens)
         } else {
                 return 0; // MESSAGE_UNKNOWN
         }
+        
+
+        
 
         return 0;
 }
@@ -96,6 +99,7 @@ int message_parse(message_t* m, char** tokens, int num_tokens)
 typedef struct _experiment_t {
         // fields set and updated by remote host
         char name[64];
+        
         double cpu_usage;
         double cpu_load;
         double cpu_load_idle;
@@ -113,6 +117,8 @@ typedef struct _experiment_t {
         double energy_sys;
         double energy_user;
         double energy_comp;
+
+        double energy_last;
 } experiment_t;
 
 experiment_t* new_experiment()
@@ -175,6 +181,8 @@ int host_start_experiment(host_t* host, message_t* m)
                 log_err("host_start_experiment: host %d: reached max number of experiments.", host->id);
                 return -1;
         }
+        log_info("host_start_experiment: new experiment %s.", m->name);
+
         experiment_t* experiment = new_experiment();
         if (experiment == NULL)
                 return -1;
@@ -182,6 +190,9 @@ int host_start_experiment(host_t* host, message_t* m)
         strncpy(experiment->name, m->name, 64);
         experiment->name[63] = 0;
         experiment->time_start = get_time();
+
+        meter_t* meter = host->meter;
+        experiment->energy_last = meter_get_energy(meter);
 
         host->experiments[host->num_experiments++] = experiment;
         host->cur_experiment = experiment;
@@ -196,13 +207,25 @@ int host_stop_experiment(host_t* host, message_t* m)
         }
 
         double t = get_time();
+        experiment_t* e = host->cur_experiment;
 
-        if (strcmp(host->cur_experiment->name, "idle") == 0) {
-                host->idle_power = host->cur_experiment->energy / (t - host->cur_experiment->time_start);
+        if (strcmp(e->name, "idle") == 0) {
+                host->idle_power = e->energy / (t - e->time_start);
         }
 
-        host->cur_experiment->time_end = t;
+        e->time_end = t;
+
+        log_info("host_stop_experiment: "
+                 "T %f, E %f, Eidle %f, Esys %f, "
+                 "E_user %f, E_comp %f, avg Watt %f, kflops %f, kflops/J %f.",
+                 e->time_end - e->time_start,
+                 e->energy, e->energy_idle, e->energy_sys,
+                 e->energy_user, e->energy_comp,  
+                 e->energy / (e->time_end - e->time_start), 
+                 e->kflops, e->kflops / e->energy);
+
         host->cur_experiment = NULL;
+
         return 0;
 }
 
@@ -212,6 +235,9 @@ int host_experiment_set(host_t* host, message_t* m)
                 log_err("host_stop_experiment: host %d: no experiment running?!...", host->id);
                 return -1;
         }
+
+        //log_info("host_experiment_set: %s=%f.", m->name, m->value);
+
         if (strcmp(m->name, "cpu_usage") == 0) 
                 host->cur_experiment->cpu_usage = m->value;
         else if (strcmp(m->name, "cpu_load") == 0) 
@@ -235,18 +261,24 @@ int host_experiment_update(host_t* host, message_t* m)
                 log_err("host_stop_experiment: host %d: no experiment running?!...", host->id);
                 return -1;
         }
-        
+
         experiment_t* e = host->cur_experiment;
         meter_t* meter = host->meter;
         float energy = meter_get_energy(meter);
+        float delta_energy = energy - e->energy_last;
         double t = get_time();
-        
-        e->energy += energy;
-        e->energy_idle += e->cpu_load_idle * energy;
-        e->energy_sys += e->cpu_load_sys * energy;
-        e->energy_user += e->cpu_load_user * energy;
-        e->energy_comp += e->cpu_load_comp * energy;
+        double delta_t = t - e->time_last;
+
+        e->energy += delta_energy;
+        e->energy_idle += e->cpu_load_idle * delta_energy;
+        e->energy_sys += e->cpu_load_sys * delta_energy;
+        e->energy_user += e->cpu_load_user * delta_energy;
+        e->energy_comp += e->cpu_load_comp * delta_energy;
         e->time_last = t;
+        e->energy_last = energy;
+
+        log_info("host_experiment_update: dT %f, dE %f, Watt %f", 
+                 delta_t, delta_energy, delta_energy / delta_t);
 
         return 0;
 }
@@ -301,7 +333,7 @@ int host_read_message(host_t* host, message_t* m)
 
                         } else if (c == '\n') {
                                 if (buflen < BUFSIZE - 1) {
-                                        buffer[buflen] = 0;
+                                        buffer[buflen++] = 0;
                                         state = FINISHED;
                                 } else {
                                         log_err("host_read_message: host %d: message too long", host->id);
@@ -309,7 +341,7 @@ int host_read_message(host_t* host, message_t* m)
                                 }
                         } else if (c == '\r') {
                                 if (buflen < BUFSIZE - 1) {
-                                        buffer[buflen] = 0;
+                                        buffer[buflen++] = 0;
                                         state = BACKSLASH_R;
                                 } else {
                                         log_err("host_read_message: host %d: message too long", host->id);
@@ -335,7 +367,7 @@ int host_read_message(host_t* host, message_t* m)
                 case READING_TOKEN: 
                         if (c == ' ') {
                                 if (buflen < BUFSIZE - 1) {
-                                        buffer[buflen] = 0;
+                                        buffer[buflen++] = 0;
                                         state = WHITE_SPACE;
                                 } else {
                                         log_err("host_read_message: host %d: message too long", host->id);
@@ -344,7 +376,7 @@ int host_read_message(host_t* host, message_t* m)
 
                         } else if (c == '\n') {
                                 if (buflen < BUFSIZE - 1) {
-                                        buffer[buflen] = 0;
+                                        buffer[buflen++] = 0;
                                         state = FINISHED;
                                 } else {
                                         log_err("host_read_message: host %d: message too long", host->id);
@@ -352,7 +384,7 @@ int host_read_message(host_t* host, message_t* m)
                                 }
                         } else if (c == '\r') {
                                 if (buflen < BUFSIZE - 1) {
-                                        buffer[buflen] = 0;
+                                        buffer[buflen++] = 0;
                                         state = BACKSLASH_R;
                                 } else {
                                         log_err("host_read_message: host %d: message too long", host->id);
@@ -559,6 +591,8 @@ static int serverSocketAccept(int serverSocket)
 
 int main(int argc, char** argv)
 {
+        log_set_filep(stdout);
+
         if (meters_init() != 0) {
                 log_err("main: failed to initialise the meters. exiting.");
                 exit(1);
