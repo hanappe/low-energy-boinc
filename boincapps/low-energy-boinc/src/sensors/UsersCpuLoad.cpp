@@ -298,9 +298,13 @@ struct UsersCpuLoadManager : SensorManager {
 
 #endif // _WIN32
 
-static UsersCpuLoadManager manager;
+static UsersCpuLoadManager * manager = 0;
 
 SensorManager* getUsersCpuLoadManager() {
-        return &manager;
+
+        if (!manager) {
+                manager = new UsersCpuLoadManager;
+        }
+        return manager;
 }
 

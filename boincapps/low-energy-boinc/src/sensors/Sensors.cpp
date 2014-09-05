@@ -1,22 +1,6 @@
-#include <vector>
 #include "Sensors.hpp"
-#include "Sensor.hpp"
-#include "BoincSensors.hpp"
-#include "Wattsup.hpp"
-#include "CpuLoad.hpp"
-#include "LibSensors.hpp"
 
-
-#ifdef _WIN32
-	#include "windows/ArduinoTemp.hpp"
-	#include "windows/BoincUserCpuLoad.hpp"
-#else // Unix
-	#include "linux/PStates.hpp"
-	#include "linux/ACPI.hpp"
-	#include "linux/BoincCpuLoad.hpp"
-	#include "linux/UsersCpuLoad.hpp"
-	#include "linux/TEMPer.hpp"
-#endif
+#include <vector>
 
 using namespace std;
 
@@ -24,34 +8,22 @@ static const bool debug = false;
 static vector<SensorManager*> managers;
 
 void Sensors::update() {
-        if (managers.size() == 0) {
-
-				managers.push_back(getWattsupManager());
-				managers.push_back(getBoincSensorsManager());
-                managers.push_back(getCpuLoadManager());
-                managers.push_back(getLibSensorsManager());
-
-				#ifdef _WIN32
-					managers.push_back(getArduinoTempManager());
-					managers.push_back(getBoincUserCpuLoadManager());
-				#else // Unix
-					managers.push_back(getBoincCpuLoadManager());
-					managers.push_back(getUsersCpuLoadManager());
-					managers.push_back(getTEMPerManager());
-					managers.push_back(getPStatesManager());
-					managers.push_back(getACPIManager());
-				#endif
-                
-                
-
-                
-        }
-
         size_t nmanagers = managers.size();
-        for (size_t i = 0; i < nmanagers; i++) {
-                if (debug) cout << managers[i]->m_name << ".update_sensors()" << endl;
+        for (size_t i = 0; i < nmanagers; ++i) {
+                if (debug)
+                        cout << managers[i]->m_name << ".update_sensors()" << endl;
                 managers[i]->update_sensors();
         }
+}
+
+void Sensors::releaseManagers() {
+
+        size_t nmanagers = managers.size();
+        for (size_t i = 0; i < nmanagers; ++i) {
+                delete managers[i];
+                managers[i] = 0;
+        }
+        managers.clear();
 }
 
 void Sensors::add_sensor_manager(SensorManager* m) {
@@ -64,70 +36,63 @@ void Sensors::add_sensor_manager(SensorManager* m) {
 void Sensors::print_datapoints(ostream& s) {
         SensorV sensors;
         ErrorV errors;
-        size_t nmanagers = managers.size();
-        for (size_t i = 0; i < nmanagers; i++) {
-                managers[i]->add_sensors(sensors, errors);
+        
+        // Each SensorManager
+        for (std::vector<SensorManager*>::iterator it = managers.begin(); it != managers.end(); ++it) {
+                (*it)->add_sensors(sensors, errors);
         }
-
-        size_t nsensors = sensors.size();
-        size_t ndatapoints = 0;
-        for (size_t i = 0; i < nsensors; i++) {
-                Sensor* sensor = sensors[i];
-                ndatapoints += sensor->m_datapoints.size();
+        
+        
+        // Each Sensor
+        size_t total_datapoints = 0;
+        for (SensorV::iterator it = sensors.begin(); it != sensors.end(); ++it) {
+                total_datapoints = (*it)->m_datapoints.size();
         }
-
-        if (ndatapoints > 0) {
+        
+        
+        if (total_datapoints > 0) {
                 s << "<sensors>" << endl;
-
+                
                 size_t index = 0;
-                for (size_t i = 0; i < nsensors; i++) {
-                        Sensor* sensor = sensors[i];
-                        if (sensor->m_datapoints.size() == 0) {
+                for (SensorV::const_iterator it = sensors.begin(); it != sensors.end(); ++it) {
+                        const Sensor* sensor = (*it);
+                        if (sensor->m_datapoints.empty()) {
                                 continue;
                         }
 
-                        s << index++ << ","
-                          << sensor->m_name << ","
-                          << sensor->m_description << endl;
+                        s << index++ << "," << (*sensor) << endl;
                 }
-
+                
                 s << "</sensors>" << endl
                   << "<datapoints>" << endl;
-
+                
                 index = 0;
-
-                for (size_t i = 0; i < nsensors; i++) {
-                        Sensor* sensor = sensors[i];
-                        size_t ndatapoints_ = sensor->m_datapoints.size();
-                        if (ndatapoints_ == 0) {
+                for (SensorV::iterator it = sensors.begin(); it != sensors.end(); ++it) {
+                        Sensor* sensor = (*it);
+                        DatapointV& datapoints = sensor->m_datapoints;
+                        
+                        if (datapoints.empty()) {
                                 continue;
                         }
-
-                        for (size_t j = 0; j < ndatapoints_; j++) {
-                                s << index << ",";
-                                sensor->m_datapoints[j].print_to(s);
-                                s << endl;
+			
+                        for (DatapointV::iterator it = datapoints.begin(); it != datapoints.end(); ++it) {
+                                s << index << "," << (*it) << endl; // Print Datapoint to stream
                         }
-
-                        sensor->m_datapoints.clear();
+                        
+                        datapoints.clear();
                         index++;
                 }
-
+                
                 s << "</datapoints>" << endl;
         }
-
-        size_t nerrors = errors.size();
-
-        if (nerrors > 0) {
+        
+        if (!errors.empty()) {
                 s << "<errors>" << endl;
-
-                for (size_t i = 0; i < nerrors; i++) {
-                        const Error& error = errors[i];
-                        s << error.m_module << ","
-                          << error.m_code << ","
-                          << error.m_text << endl;
+                
+                for (ErrorV::const_iterator it = errors.begin(); it != errors.end(); ++it) {
+                        s << (*it) << endl; // Print Error to stream
                 }
-
+                
                 s << "</errors>" << endl;
         }
 }

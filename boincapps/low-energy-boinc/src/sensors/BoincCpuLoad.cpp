@@ -23,86 +23,12 @@ static const string ERRORS[] = {
         "bad number of cpus",
 };
 
-
-
 #ifdef _WIN32
 
-#include "Wmi.h"
+	// BoincCpuLoad Only available on Unix Systems
+	// See BoincUserCpuLoad
 
-struct BoincCpuLoadSensor : Sensor {
-        BoincCpuLoadSensor() {
-                m_name = "boinccpuload";
-                m_description = "CPU load of all BOINC processes";
-        }
-};
-
-struct BoincCpuLoadManager : SensorManager {
-
-		int m_error;
-        bool m_error_reported;
-        
-
-        BoincCpuLoadSensor m_sensor;
-        int m_update_period;
-        time_t m_update_time;
-        time_t m_record_time;
-        //long m_ncpus;
-        //long m_clk_tck;
-        //uid_t m_boinc_user_id;
-        //PidToStat m_stat_history;
-
-
-        BoincCpuLoadManager() : SensorManager() {
-                m_name = "BoincCpuLoadManager";
-                m_error = 0;
-                m_error_reported = false;
-                m_update_period = 5;
-                m_update_time = 0;
-                m_record_time = 0;
-        }
-
-		
-
-        void add_sensors(SensorV& sensors, ErrorV& errors) {
-			if (m_error) {
-				if (!m_error_reported) {
-						errors.push_back(Error(__FILE__, m_error, ERRORS[m_error]));
-						m_error_reported = true;
-				}
-				return;
-            }
-
-            update_sensors();
-            sensors.push_back(&m_sensor);
-		}
-
-        void update_sensors() {
-				if (m_error) return;
-
-                time_t t = Datapoint::get_current_time();
-                if (t < m_update_time + m_update_period) return;
-                m_update_time = t;
-                long rounded_t = (t / m_update_period) * m_update_period;
-				
-                //const long long boinc_cpu_load = Wmi::GetInstance()->getBoincCpuLoad();
-				//std::cout << "BOINC CPU LOAD: " << boinc_cpu_load << std::endl;
-				long long boinc_cpu_load;
-				long long user_cpu_load;
-
-				Wmi::GetInstance()->getBoincAndUserCpuLoad(boinc_cpu_load, user_cpu_load);
-				std::cout << "BOINC CPU LOAD: " << boinc_cpu_load << std::endl;
-				std::cout << "USER CPU LOAD: " << user_cpu_load << std::endl;
-
-                if (m_record_time > 0) {
-                        double boinc_cpu_load_ratio = (boinc_cpu_load / 100.0f);
-                        m_sensor.m_datapoints.push_back(Datapoint(rounded_t, boinc_cpu_load_ratio));
-                }
-
-                m_record_time = t;
-        }
-};
-
-#else // !_WIN32
+#else // Unix
 
 
 #include <sys/types.h>
@@ -303,11 +229,16 @@ struct BoincCpuLoadManager : SensorManager {
         }
 };
 
-#endif // _WIN32
 
-static BoincCpuLoadManager manager;
+
+static BoincCpuLoadManager * manager = 0;
 
 SensorManager* getBoincCpuLoadManager() {
-        return &manager;
+
+        if (!manager) {
+                manager = new BoincCpuLoadManager; 
+        }
+        return manager;
 }
 
+#endif // _WIN32

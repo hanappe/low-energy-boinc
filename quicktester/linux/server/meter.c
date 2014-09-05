@@ -255,6 +255,12 @@ meter_t* meter_new(int usb_id)
         return m;
 }
 
+void meter_stop(meter_t* m)
+{
+        if (m == NULL) return;
+        m->run = 0;
+}
+
 void meter_delete(meter_t* m)
 {
         if (m == NULL) return;
@@ -570,6 +576,14 @@ int meters_fini()
         }
 
         return 0;
+}
+
+void meters_stop()
+{
+        for (int i = 0; i < MAX_METERS; i++) {
+                if (_meters[i] == NULL) continue;
+                meter_stop(_meters[i]);
+        }
 }
 
 int meters_count()

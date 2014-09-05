@@ -155,10 +155,14 @@ struct ACPIManager : SensorManager {
 
 #endif // end ifdef _WIN32
 
-static ACPIManager manager;
+static ACPIManager * manager = 0;
 
 SensorManager* getACPIManager() {
-        return &manager;
+
+        if (!manager) {
+                manager = new ACPIManager;
+        }
+        return manager;
 }
 
 

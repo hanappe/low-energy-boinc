@@ -13,7 +13,7 @@
 
 using namespace std;
 
-static const bool debug = true;
+static const bool debug = false;
 
 static const string ERRORS[] = {
 #define ERROR_NO_ERROR 0
@@ -54,6 +54,13 @@ struct CpuLoadSensor : Sensor {
         }	
 };
 
+struct CpuFrequencySensor : Sensor {
+		CpuFrequencySensor() {
+                m_name = "cpufrequency";
+                m_description = "Cpu Frequency";
+		}
+};
+
 // Send the cpu load in range [0.0f - 1.0f]
 
 struct CpuLoadManager : SensorManager {
@@ -63,37 +70,23 @@ struct CpuLoadManager : SensorManager {
         long m_ncpus;
         long m_clk_tck;
         CpuLoadSensor m_machine;
-        int m_update_period;
+        CpuFrequencySensor m_frequency;
+		int m_update_period;
         time_t m_update_time;
         time_t m_record_time;
-        CpuStat m_stat;
 
         CpuLoadManager() {
                 m_name = "CpuLoadManager";
                 m_error = 0;
                 m_error_reported = false;
 				
-				std::vector<LPCWSTR> properties;
-				properties.push_back(L"NumberOfCores");
-				properties.push_back(L"MaxClockSpeed");
-				
-				std::map<LPCWSTR, std::vector<VARIANT> > res;
-				Wmi::GetInstance()->getMulti2("Win32_Processor", properties, res);
 
-				std::map<LPCWSTR, std::vector<VARIANT> >::iterator i;
-				i = res.find(L"NumberOfCores");
-				if (i != res.end() ) {
-					m_ncpus = res[L"NumberOfCores"][0].iVal;
-				}
-				
+				m_ncpus = Wmi::GetInstance()->getNumCore();
 				if (m_ncpus <= 0) {
                         m_error = ERROR_BAD_NUMBER_OF_CPUS;
                 }
-				i = res.find(L"MaxClockSpeed");
-				if (i != res.end()) {
-					m_clk_tck = res[L"MaxClockSpeed"][0].iVal;
-				}
 				
+				m_clk_tck = Wmi::GetInstance()->getMaxClockSpeed();
 				if (m_clk_tck <= 0) {
                         m_error = ERROR_BAD_CLK_TCK;
                 }
@@ -119,40 +112,40 @@ struct CpuLoadManager : SensorManager {
                 }
 
                 sensors.push_back(&m_machine);
+				sensors.push_back(&m_frequency);
         }
 
         void update_sensors() {
 				
                 if (m_error) return;
 
-				
                 time_t t = Datapoint::get_current_time();
 				
                 if (t < m_update_time + m_update_period) return;
                 m_update_time = t;
-                long rounded_t = (t / m_update_period) * m_update_period;
+                time_t rounded_t = (t / m_update_period) * m_update_period;
 				
-				//std::cout << "CpuLoadManager::update_sensors time_t: " << t << std::endl;
-
-				const long long load_percentage = Wmi::GetInstance()->getTotalCpuLoad();
-
-				CpuStat stat;
-				stat.load_percentage = load_percentage;
-
                 if (m_record_time > 0) {
-						float ratio = load_percentage / 100.0f;
-						if (debug) {
-							std::cout << "CpuLoad: " << load_percentage << " " << ratio << std::endl;
+
+						long long cpu_load; 
+						long long cpu_frequency;
+
+						Wmi::GetInstance()->getCpuInfo(cpu_load, cpu_frequency);
+						
+						double cpu_load_ratio = 0;
+						if (cpu_load > 0) {
+							cpu_load_ratio = (static_cast<double>(cpu_load) / 100.0);
 						}
-                        m_machine.m_datapoints.push_back(Datapoint(rounded_t, ratio));
-                }
-				
-				
-				Wmi::GetInstance()->printAllProcess();
 
-
+                        m_machine.m_datapoints.push_back(Datapoint(rounded_t, cpu_load_ratio));
+						m_frequency.m_datapoints.push_back(Datapoint(rounded_t, static_cast<double>(cpu_frequency)));
+						
+						if (debug) {
+							std::cout << "CpuLoad: " << cpu_load << " " << cpu_load_ratio << std::endl;
+							std::cout << "CpuFrequency: " << cpu_frequency << " " << std::endl;
+						}
+				}
 				m_record_time = t;
-                m_stat = stat;
         }
 };
 
@@ -289,9 +282,14 @@ struct CpuLoadManager : SensorManager {
 
 #endif // end ifdef _WIN32
 
-static CpuLoadManager manager;
+static CpuLoadManager * manager;
 
 SensorManager* getCpuLoadManager() {
-        return &manager;
+
+		if (!manager) {
+				manager = new CpuLoadManager;
+		}
+
+        return manager;
 }
 
