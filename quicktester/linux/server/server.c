@@ -15,6 +15,16 @@
 
 /* -------------------------------------------------*/
 
+static int signaled = 0;
+
+void signal_handler(int signum)
+{
+        signaled = 1;
+        meters_stop();
+}
+
+/* -------------------------------------------------*/
+
 double get_time()
 {
         struct timeval tv;
@@ -559,6 +569,12 @@ static int serverSocketAccept(int serverSocket)
 
 int main(int argc, char** argv)
 {
+        signal(SIGINT, signal_handler);
+        signal(SIGHUP, signal_handler);
+        signal(SIGQUIT, signal_handler);
+        signal(SIGTERM, signal_handler);
+        signal(SIGPWR, signal_handler);
+
         if (meters_init() != 0) {
                 log_err("main: failed to initialise the meters. exiting.");
                 exit(1);
@@ -578,6 +594,8 @@ int main(int argc, char** argv)
         while (1) {
 
                 int client = serverSocketAccept(server_socket); 
+                if (signaled)
+                        break;
                 if (client == -1)
                         continue;
 
@@ -605,5 +623,15 @@ int main(int argc, char** argv)
         }
 
         closeServerSocket(server_socket); 
-        
+
+        printf("Finalizing...\n");
+
+        if (meters_fini() != 0) {
+                log_err("main: failed to finalize the meters");
+                exit(1);
+        }
+
+        hosts_stop();
+
+        return 0;
 }
