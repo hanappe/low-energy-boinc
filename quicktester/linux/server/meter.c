@@ -54,7 +54,6 @@ static void packet_delete(packet_t* p)
         free(p);
 }
 
-/*
 static void packet_version_request(packet_t* p)
 {
         packet_init(p);
@@ -63,7 +62,6 @@ static void packet_version_request(packet_t* p)
         p->field_count = 0;
         p->wait_reply = 'v';
 }
-*/
 
 static void packet_request_fields(packet_t* p)
 {
@@ -137,17 +135,19 @@ struct meter_s {
         double last_read_time;
         packet_t* packet;
 
+        int started;
         int run;
         pthread_attr_t attr;
         pthread_t thread;
 
+        double watts;
+        double timestamp;
         float energy;
-        double last_energy_time;
 };
 
 static meter_t* meter_new(int usb_id);
 static void meter_delete(meter_t* meter);
-static void* meter_run(void* ptr);
+static void* meter_start_routine(void* ptr);
 static int meter_packet_write(meter_t* meter, packet_t* p);
 static int meter_packet_read(meter_t* meter, packet_t* p);
 static int meter_read_watts(meter_t* m);
@@ -204,32 +204,25 @@ meter_t* meter_new(int usb_id)
 
         m->packet = packet_new();
 
+        packet_internal_logging_600seconds(m->packet);
+        err = meter_packet_write(m, m->packet);
+        if (err) {
+                meter_delete(m);
+                return NULL;
+        }
+
+        packet_version_request(m->packet);
+        err = meter_packet_write(m, m->packet);
+        if (err) {
+                meter_delete(m);
+                return NULL;
+        }
+
         for (int i = 0; ; i++) {
-                packet_request_fields(m->packet);
-                err = meter_packet_write(m, m->packet);
-                if (err) {
-                        meter_delete(m);
-                        return NULL;
-                }
+                err = meter_packet_read(m, m->packet);
+                if (!err && m->packet->cmd == 'v') break;
 
-                packet_memory_full_handling(m->packet);
-                err = meter_packet_write(m, m->packet);
-                if (err) {
-                        meter_delete(m);
-                        return NULL;
-                }
-
-                packet_external_logging_1second(m->packet);
-                err = meter_packet_write(m, m->packet);
-                if (err) {
-                        meter_delete(m);
-                        return NULL;
-                }
-
-                err = meter_read_watts(m);
-                if (!err) break;
-
-                if (i >= 5) {
+                if (i >= 10) {
                         printf("Trying %s... failed\n", m->device);
                         meter_delete(m);
                         return NULL;
@@ -238,21 +231,27 @@ meter_t* meter_new(int usb_id)
 
         printf("Trying %s... success\n", m->device);
 
-        err = pthread_attr_init(&m->attr);
+        return m;
+}
+
+void meter_start(meter_t* m)
+{
+        if (m == NULL) return;
+        if (m->started) return;
+
+        int err = pthread_attr_init(&m->attr);
         if (err) {
                 log_err("meter_new: pthread_attr_init failed");
-                meter_delete(m);
-                return NULL;
+                return;
         }
 
-        err = pthread_create(&m->thread, &m->attr, &meter_run, m);
+        err = pthread_create(&m->thread, &m->attr, &meter_start_routine, m);
         if (err) {
                 log_err("meter_new: pthread_create failed");
-                meter_delete(m);
-                return NULL;
+                return;
         }
 
-        return m;
+        m->started = 1;
 }
 
 void meter_stop(meter_t* m)
@@ -265,15 +264,13 @@ void meter_delete(meter_t* m)
 {
         if (m == NULL) return;
 
-        if (m->run) {
+        if (m->started) {
                 m->run = 0;
                 pthread_join(m->thread, NULL);
+                m->started = 0;
         }
 
         if (m->fd >= 0) {
-                packet_internal_logging_600seconds(m->packet);
-                meter_packet_write(m, m->packet);
-
                 close(m->fd);
                 m->fd = -1;
         }
@@ -319,6 +316,7 @@ static int meter_packet_write(meter_t* m, packet_t* p) {
                 pos += res;
         }
 
+        usleep(20000);
         return 0;
 }
 
@@ -490,14 +488,14 @@ int meter_read_watts(meter_t* m)
                 if (err) continue;
 
                 if (m->packet->cmd == 'd' && m->packet->sub_cmd == '-' && m->packet->fields[0] != NULL) {
-                        double watts = strtod(m->packet->fields[0], NULL) / 10.0;
+                        m->watts = strtod(m->packet->fields[0], NULL) / 10.0;
 
-                        if (m->last_energy_time > 0) {
-                                double delta_t = m->last_read_time - m->last_energy_time;
-                                m->energy += watts * delta_t;
+                        if (m->timestamp > 0) {
+                                double delta_t = m->last_read_time - m->timestamp;
+                                m->energy += m->watts * delta_t;
                         }
 
-                        m->last_energy_time = m->last_read_time;
+                        m->timestamp = m->last_read_time;
                         return 0;
                 }
         }
@@ -505,21 +503,43 @@ int meter_read_watts(meter_t* m)
         return -1;
 }
 
-float meter_get_energy(meter_t* m)
+float meter_get_energy(meter_t* m, float* watts, double* timestamp)
 {
+        if (watts != NULL) *watts = m->watts;
+        if (timestamp != NULL) *timestamp = m->timestamp;
         return m->energy;
 }
 
-void* meter_run(void* ptr)
+void* meter_start_routine(void* ptr)
 {
+        int err = 0;
         meter_t* m = (meter_t*) ptr;
         m->run = 1;
+
+        packet_request_fields(m->packet);
+        err = meter_packet_write(m, m->packet);
+        if (err) goto meter_start_routine_end;
+
+        packet_memory_full_handling(m->packet);
+        err = meter_packet_write(m, m->packet);
+        if (err) goto meter_start_routine_end;
+
+        packet_external_logging_1second(m->packet);
+        err = meter_packet_write(m, m->packet);
+        if (err) goto meter_start_routine_end;
+
         int nerrors = 0;
-        while (m->run && nerrors < 4) {
-                int err = meter_read_watts(m);
+        while (m->run && nerrors < 20) {
+                err = meter_read_watts(m);
                 if (err) nerrors++;
         }
+
+ meter_start_routine_end:
+
         printf("%s stopped\n", m->device);
+        packet_internal_logging_600seconds(m->packet);
+        meter_packet_write(m, m->packet);
+
         return NULL;
 }
 
@@ -567,6 +587,22 @@ int meters_init()
         return meters_count() == 0;
 }
 
+void meters_start()
+{
+        for (int i = 0; i < MAX_METERS; i++) {
+                if (_meters[i] == NULL) continue;
+                meter_start(_meters[i]);
+        }
+}
+
+void meters_stop()
+{
+        for (int i = 0; i < MAX_METERS; i++) {
+                if (_meters[i] == NULL) continue;
+                meter_stop(_meters[i]);
+        }
+}
+
 int meters_fini()
 {
         for (int i = 0; i < MAX_METERS; i++) {
@@ -576,14 +612,6 @@ int meters_fini()
         }
 
         return 0;
-}
-
-void meters_stop()
-{
-        for (int i = 0; i < MAX_METERS; i++) {
-                if (_meters[i] == NULL) continue;
-                meter_stop(_meters[i]);
-        }
 }
 
 int meters_count()
