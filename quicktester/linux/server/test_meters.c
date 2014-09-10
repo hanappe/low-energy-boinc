@@ -8,12 +8,13 @@
 
 static int signaled = 0;
 
-void signal_handler(int signum) {
+void signal_handler(int signum)
+{
         signaled = 1;
 }
 
-int main(int argc, char** argv) {
-
+int main(int argc, char** argv)
+{
         signal(SIGINT, signal_handler);
         signal(SIGHUP, signal_handler);
         signal(SIGQUIT, signal_handler);
@@ -30,8 +31,10 @@ int main(int argc, char** argv) {
         int nmeters = meters_count();
         printf("Found %d meter%s.\n", nmeters, nmeters == 1 ? "" : "s");
 
+        meters_start();
+
         while (1) {
-                usleep(2000000);
+                usleep(1100000);
 
                 if (signaled) {
                         printf("\n");
@@ -40,13 +43,14 @@ int main(int argc, char** argv) {
 
                 for (int i = 0; i < nmeters; i++) {
                         meter_t* m = meters_get(i);
-                        float energy = meter_get_energy(m);
+                        float energy = meter_get_energy(m, NULL, NULL);
                         printf("meter %d: %gJ\n", i, energy);
                 }
         }
 
         printf("Finalizing...\n");
 
+        meters_stop();
         if (meters_fini() != 0) {
                 log_err("main: failed to finalize the meters");
                 exit(1);

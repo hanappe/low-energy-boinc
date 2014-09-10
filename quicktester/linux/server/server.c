@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <pthread.h>
+#include <signal.h>
 #include "meter.h"
 #include "log.h"
 
@@ -202,7 +203,7 @@ int host_start_experiment(host_t* host, message_t* m)
         experiment->time_start = get_time();
 
         meter_t* meter = host->meter;
-        experiment->energy_last = meter_get_energy(meter);
+        experiment->energy_last = meter_get_energy(meter, NULL, NULL);
 
         host->experiments[host->num_experiments++] = experiment;
         host->cur_experiment = experiment;
@@ -274,7 +275,7 @@ int host_experiment_update(host_t* host, message_t* m)
 
         experiment_t* e = host->cur_experiment;
         meter_t* meter = host->meter;
-        float energy = meter_get_energy(meter);
+        float energy = meter_get_energy(meter, NULL, NULL);
         float delta_energy = energy - e->energy_last;
         double t = get_time();
         double delta_t = t - e->time_last;
@@ -625,6 +626,8 @@ int main(int argc, char** argv)
                 exit(1);
         }
 
+        meters_start();
+
         while (1) {
 
                 int client = serverSocketAccept(server_socket); 
@@ -659,6 +662,8 @@ int main(int argc, char** argv)
         closeServerSocket(server_socket); 
 
         printf("Finalizing...\n");
+
+        meters_stop();
 
         if (meters_fini() != 0) {
                 log_err("main: failed to finalize the meters");
