@@ -1,4 +1,5 @@
 #define _BSD_SOURCE
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -316,7 +317,7 @@ static int meter_packet_write(meter_t* m, packet_t* p) {
                 pos += res;
         }
 
-        usleep(20000);
+        pthread_yield();
         return 0;
 }
 
@@ -353,6 +354,8 @@ static int meter_packet_read(meter_t* m, packet_t* p) {
                 m->buf_len += res;
                 m->last_read_time = get_time();
         }
+
+        pthread_yield();
 
         if (m->buf_pos1 <= m->buf_pos0) {
                 // Look for '#'.
