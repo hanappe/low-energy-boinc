@@ -1,0 +1,26 @@
+TARGETNAME=LPCFilter
+TARGETTYPE=DRIVER
+DRIVERTYPE=WDM
+NTDEBUGTYPE=windbg
+
+C_DEFINES= -DX86ARCH=1
+
+USER_C_FLAGS= /Od
+
+
+C_FLAGS=$(C_FLAGS)
+LINKER_FLAGS=$(LINKER_FLAGS)
+USE_MAPSYM=1
+
+MSC_WARNING_LEVEL=/W3 /WX
+
+TARGETPATH=obj
+
+TARGETLIBS=$(DDK_LIB_PATH)\ntoskrnl.lib
+
+SOURCES=..\entry.c \
+	..\ACPI.c \
+	..\helper_asm.c \
+	..\thread.c \
+	 resource.rc
+

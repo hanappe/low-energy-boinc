@@ -1,0 +1,42 @@
+REM IF NO CERTIFICATE EXISTS:
+
+REM To make a certificate:
+REM makecert -r -pe -ss LPCFilterCertStore -n CN=LPCFilter LPCFilter.cer
+
+
+REM To add the certificate to the local Machine root store:
+REM certmgr.exe /add LPCFilter.cer /s /r localMachine root
+
+
+
+REM IF CERTIFICATE and PRIVATE KEY EXIST (in form of LPCFilter.pfx) EITHER:
+REM i. Double click LPCFilter.pfx in Explorer and go through the import routine.
+REM ii. certutil –user –p SonyCSL –importPFX LPCFilter.pfx
+
+
+
+REM To create the cat files:
+inf2cat /driver:e:\SonyFilter\Distribution\ /os:7_x64
+inf2cat /driver:e:\SonyFilter\Distribution\ /os:7_x86
+
+
+
+
+REM To sign the cat files:
+signtool sign /v /s LPCFilterCertStore /n LPCFilter LPCFilterx64.cat
+signtool sign /v /s LPCFilterCertStore /n LPCFilter LPCFilterx86.cat
+
+
+
+REM  If you chose 'let the wizard chose the store' when importing the pfx it ends up in the Personal store.
+REM This is called the MY store and you dont need to specify the name
+REM signtool sign /v /n LPCFilter LPCFilterx64.cat
+REM signtool sign /v /n LPCFilter LPCFilterx86.cat
+
+
+
+
+
+
+
+
