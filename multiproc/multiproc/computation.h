@@ -23,6 +23,7 @@ void delete_computation_data(computation_data_t* d);
 
 
 void linpack_main(computation_data_t* d);
+void linpack_lpc_main(computation_data_t* d);
 
 
 int computation_init();
