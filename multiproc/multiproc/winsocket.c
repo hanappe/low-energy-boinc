@@ -19,7 +19,8 @@ int winsocket_init()
     struct addrinfo* _ptr = NULL;
     struct addrinfo _hints;
 	// Temp var, for testing
-	char address[] = "10.0.1.224";
+	char address[] = "10.0.1.114";
+	//char address[] = "10.0.1.202";
 	char port[] = "2014";
     WSADATA InitData;
 	int res;
@@ -92,19 +93,23 @@ int winsocket_send(const char * data)
 
 int winsocket_end()
 {
-	// shutdown the connection since no more data will be sent
-	int res = shutdown(_socket, SD_SEND);
-	if (res == SOCKET_ERROR) {
-		printf("shutdown failed with error: %d\n", WSAGetLastError());
+	if (_socket >= 0 && _socket != INVALID_SOCKET) {
+		// shutdown the connection since no more data will be sent
+		int res = shutdown(_socket, SD_SEND);
+		if (res == SOCKET_ERROR) {
+			printf("shutdown failed with error: %d\n", WSAGetLastError());
+			closesocket(_socket);
+			WSACleanup();
+			return 0;
+		}
+
+		// cleanup
 		closesocket(_socket);
-		WSACleanup();
-		return 0;
+
+		_socket = -1;
 	}
 
-	// cleanup
-	closesocket(_socket);
+ 	WSACleanup();
 
-    WSACleanup();
- 
 	return 0;
 }

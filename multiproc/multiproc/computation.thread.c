@@ -5,6 +5,8 @@
 #include "computation.h"
 #include "log.h"
 
+static int _computation_mode = STANDARD;
+
 computation_data_t* new_computation_data(int size, FILE* out)
 {
 	computation_data_t* d = (computation_data_t*) malloc(sizeof(computation_data_t));
@@ -25,6 +27,10 @@ void delete_computation_data(computation_data_t* d)
 	free(d);
 }
 
+void set_computation_mode(int mode) {
+	_computation_mode = mode;
+}
+
 
 enum {
 	NO_PROCESS = 0,
@@ -32,6 +38,8 @@ enum {
 	SUSPENDED,
 	FINISHED
 };
+
+
 
 typedef struct _computation_t {
 	int state;
@@ -58,7 +66,15 @@ void computation_cleanup()
 static DWORD computation_proc(LPVOID param)
 {
 	computation_t* c = (computation_t*) param;
-	linpack_main(c->d);		
+
+
+	switch (_computation_mode) {
+		case STANDARD: linpack_main(c->d); break;
+		case DRIVER: linpack_lpc_main(c->d); break;
+		default: {
+			log_err("computation_proc: error, unkown computation mode: %d", _computation_mode);
+		}
+	}
 	c->state = FINISHED;
 	return 0;
 }

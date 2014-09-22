@@ -14,11 +14,13 @@
 
 enum {
 	EXP_IDLE,
-	EXP_CPU_100,
+	/*EXP_CPU_100,
+	
 	EXP_CPU_80,
 	EXP_CPU_60,
 	EXP_CPU_40,
-	EXP_CPU_20,
+	EXP_CPU_20,*/
+	EXP_LPC,
 	EXP_END
 };
 
@@ -31,6 +33,7 @@ int count_cpus()
 
 static HANDLE throttling_thread = NULL;
 static int throttling_continue = 1;
+static int throttling_activated = 1;
 static int _cpu_usage = 100;
 
 void throttling_set_cpu_usage(int cpu_usage)
@@ -43,11 +46,16 @@ int throttling_get_cpu_usage()
 	return _cpu_usage;
 }
 
+void throttling_set_activation(int activate)
+{
+	throttling_activated = activate;
+}
+
 static DWORD throttling_proc(LPVOID param)
 {
 #define THROTTLING_PERIOD  5000
 
-	while (throttling_continue) {
+	while (throttling_continue && throttling_activated) {
 		int msec_run = THROTTLING_PERIOD * throttling_get_cpu_usage() / 100;
 		int msec_sleep = THROTTLING_PERIOD - msec_run;
 
@@ -132,11 +140,55 @@ static DWORD experiment_proc(LPVOID param)
 
 		switch (experiment_state) {
 			case EXP_IDLE: throttling_set_cpu_usage(100); compute = 0; break;
-			case EXP_CPU_100: throttling_set_cpu_usage(100); compute = 1; break;
-			case EXP_CPU_80: throttling_set_cpu_usage(80); compute = 1; break;
+			/*case EXP_CPU_100: {
+				throttling_set_cpu_usage(100);
+				compute = 1;
+				throttling_set_activation(1);
+				set_computation_mode(STANDARD);
+				break;
+			}
+			case EXP_CPU_80: {
+				throttling_set_cpu_usage(80);
+				compute = 1;
+				throttling_set_activation(1);
+				set_computation_mode(STANDARD);
+				break;
+			}
+			case EXP_CPU_60: {
+				throttling_set_cpu_usage(60);
+				compute = 1;
+				throttling_set_activation(1);
+				set_computation_mode(STANDARD);
+				break;
+			}
+			case EXP_CPU_40: {
+				throttling_set_cpu_usage(40);
+				compute = 1;
+				throttling_set_activation(1);
+				set_computation_mode(STANDARD);
+				break;
+			}
+			case EXP_CPU_20: {
+				throttling_set_cpu_usage(20);
+				compute = 1;
+				throttling_set_activation(1);
+				set_computation_mode(STANDARD);
+				break;
+			}*/
+			/*case EXP_CPU_80: throttling_set_cpu_usage(80); compute = 1; break;
 			case EXP_CPU_60: throttling_set_cpu_usage(60); compute = 1; break;
 			case EXP_CPU_40: throttling_set_cpu_usage(40); compute = 1; break;
 			case EXP_CPU_20: throttling_set_cpu_usage(20); compute = 1; break;
+			*/
+			case EXP_LPC: {
+				throttling_set_activation(0);
+				set_computation_mode(DRIVER);
+				compute = 1;
+				break;
+			}
+			default: {
+				log_err("Experiment state unkown"); 
+			}
 		}
 
 		for (int test = 0; test < 3; test++) {
@@ -227,7 +279,12 @@ static DWORD experiment_proc(LPVOID param)
 	}
 
 	log_info("Experiment finished"); 
-	printf("\n\nExperiment finished\n\n");
+	printf("\n\nExperiment finished (with state %d)\n\n", experiment_state);
+
+	winsocket_end();
+	measurements_stop();
+	
+
 	return 0;
 }
 
@@ -294,7 +351,13 @@ int _tmain(int argc, _TCHAR* argv[])
 		if (buf[0]=='\0' || buf[0]=='\n' || buf[0]=='\r') {
             log_info("Requested skip\n");
             printf("Requested skip\n");
-			experiment_next_state();
+
+			if (experiment_state < EXP_END) {
+				experiment_next_state();
+			} else {
+				experiment_stop();
+				break;
+			}
 		}
 	}
 

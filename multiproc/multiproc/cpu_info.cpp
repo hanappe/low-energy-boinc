@@ -1267,6 +1267,53 @@ void clear_host_info(host_info_t* h) {
 
 }
 
+
+namespace {
+
+	void replace_space(char* str)
+	{
+		const char * end = str + strlen(str);
+		
+		while(str != end) {
+			//printf("char: %c\n", *str);
+			if (*str == ' ') {
+				*str = '_';
+			}
+			++str;
+		}
+	}
+
+}
+
+int get_host_info(host_info_t* h)  {
+//int get_host_info(host_info_t * hi) {
+
+
+	 get_processor_info(
+        h->p_vendor, sizeof(h->p_vendor),
+        h->p_model, sizeof(h->p_model),
+        h->p_features, sizeof(h->p_features),
+        h->m_cache,
+        h->p_ncpus
+    );
+
+	get_os_info(
+        h->os_name, sizeof(h->os_name), h->os_version, sizeof(h->os_version)
+    );
+
+	get_memory_info(&h->m_nbytes, &h->m_swap);
+
+	// Replace space with _
+	replace_space(h->p_vendor);
+	replace_space(h->p_model);
+	replace_space(h->os_name);
+	replace_space(h->os_version);
+
+
+	return 0;
+}
+/*
+
 int get_host_info(host_info_t* h)  {
 //int get_host_info(host_info_t * hi) {
 
@@ -1287,7 +1334,7 @@ int get_host_info(host_info_t* h)  {
 
 	return 0;
 }
-
+*/
 void print_host_info(host_info_t* h) {
 	printf("processor vendor: %s \n", h->p_vendor);
 	printf("processor model: %s \n", h->p_model);

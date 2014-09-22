@@ -30,6 +30,8 @@
 #include "counter.h"
 #include "computation.h"
 
+#include "LPCInterface.h"
+
 #define DP
 
 #ifdef SP
@@ -65,36 +67,69 @@ static REAL second   (void);
 
 //static void *mempool;
 static REAL last_t = 0;
-
+// Driver stuff
+static LPCInterface* lpci = 0;
+static LPCPstateStats* stats = 0;
 
 void linpack_lpc_main(computation_data_t* d)
 {
+
+	LPCConfiguration cfg;
     long    arsize2d,memreq,nreps;
     size_t  malloc_arg;
 	void *mempool;
 	int arsize = d->size;
+	int ret;
 
-        arsize2d = (long)arsize*(long)arsize;
-        memreq=arsize2d*sizeof(REAL)+(long)arsize*sizeof(REAL)+(long)arsize*sizeof(int);
-        fprintf(d->out, "Memory required:  %ldK.\n",(memreq+512L)>>10);
-        malloc_arg=(size_t)memreq;
-        if (malloc_arg!=memreq || (mempool=malloc(malloc_arg))==NULL)
-            {
-            fprintf(d->out, "Not enough memory available for given array size.\n\n");
-            return;
-            }
-        fprintf(d->out, "\n\nLINPACK benchmark, %s precision.\n",PREC);
-        fprintf(d->out, "Machine precision:  %d digits.\n",BASE10DIG);
-        fprintf(d->out, "Array size %d X %d.\n",arsize,arsize);
-        fprintf(d->out, "Average rolled and unrolled performance:\n\n");
-        fprintf(d->out, "    Reps Time(s) DGEFA   DGESL  OVERHEAD    KFLOPS\n");
-        fprintf(d->out, "----------------------------------------------------\n");
-        nreps=1;
-        last_t = second();
-        while (linpack(nreps, arsize, mempool, d) < 10.)
-            nreps*=2;
-        free(mempool);
-        fprintf(d->out, "\n");
+	printf("linpack_lpc_main\n");
+
+	lpci = LPCInterfaceNew();
+
+	if (lpci == NULL) {
+		printf("linpack_lpc_main, LPCInterfaceNew() failed, driver not installed ?\n");
+		return;
+	}
+
+	
+	ret = LPCGetConfig(lpci, &cfg);
+	if (ret != 0) {
+		printf("LPCConfiguration error: %s\n", LPCGetErrorMessage(lpci));
+		LPCInterfaceDelete(lpci);
+		return;
+	}
+
+
+	stats = LPCGetStats(lpci);
+	if (stats == NULL) {
+		printf("LPCSetPstate error: %s\n", LPCGetErrorMessage(lpci));
+		//goto error_recovery;
+		LPCInterfaceDelete(lpci);
+		return;
+	}
+
+	printf("LPCInterfaceNew OK\n");
+
+    arsize2d = (long)arsize*(long)arsize;
+    memreq=arsize2d*sizeof(REAL)+(long)arsize*sizeof(REAL)+(long)arsize*sizeof(int);
+    fprintf(d->out, "Memory required:  %ldK.\n",(memreq+512L)>>10);
+    malloc_arg=(size_t)memreq;
+    if (malloc_arg!=memreq || (mempool=malloc(malloc_arg))==NULL)
+        {
+        fprintf(d->out, "Not enough memory available for given array size.\n\n");
+        return;
+        }
+    fprintf(d->out, "\n\nLINPACK benchmark, %s precision.\n",PREC);
+    fprintf(d->out, "Machine precision:  %d digits.\n",BASE10DIG);
+    fprintf(d->out, "Array size %d X %d.\n",arsize,arsize);
+    fprintf(d->out, "Average rolled and unrolled performance:\n\n");
+    fprintf(d->out, "    Reps Time(s) DGEFA   DGESL  OVERHEAD    KFLOPS\n");
+    fprintf(d->out, "----------------------------------------------------\n");
+    nreps=1;
+    last_t = second();
+    while (linpack(nreps, arsize, mempool, d) < 10.)
+        nreps*=2;
+    free(mempool);
+    fprintf(d->out, "\n");
 }
 
 /*
@@ -610,7 +645,7 @@ static void daxpy_r(int n,REAL da,REAL *dx,int incx,REAL *dy,int incy)
     if (da == ZERO)
         return;
 
-    second();
+    second(); // lpc add
 
     if (incx != 1 || incy != 1)
         {
@@ -724,7 +759,7 @@ static void daxpy_ur(int n,REAL da,REAL *dx,int incx,REAL *dy,int incy)
     if (da == ZERO)
         return;
 
-    second();
+    second(); // lpc add
 
     if (incx != 1 || incy != 1)
         {
@@ -920,9 +955,19 @@ static int idamax(int n,REAL *dx,int incx)
 
 static REAL second(void)
 {
+	unsigned int i;
+
     REAL t = (REAL) counter_get();
     if (t - last_t >= 0.1) {
-        LPCSetPstate(); // TODO
+        //LPCSetPstate(lpci); // TODO
+
+		for (i = 0; i < stats->NumCPUs; i++) {
+			int ret = LPCSetPstate(lpci, i, 2);
+			if (ret != 0) {
+				printf("LPCSetPstate error: %s\n", LPCGetErrorMessage(lpci));
+			}
+		}
+
         t = (REAL) counter_get();
         last_t = t;
     }

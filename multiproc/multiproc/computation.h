@@ -9,6 +9,11 @@ extern "C" {
 #endif
 
 
+enum {
+	STANDARD = 0,
+	DRIVER
+};
+
 typedef struct _computation_data_t {
 	// input
 	int size;
@@ -21,6 +26,8 @@ typedef struct _computation_data_t {
 computation_data_t* new_computation_data(int size, FILE* out);
 void delete_computation_data(computation_data_t* d);
 
+// Standard or with driver
+void set_computation_mode(int mode);
 
 void linpack_main(computation_data_t* d);
 void linpack_lpc_main(computation_data_t* d);

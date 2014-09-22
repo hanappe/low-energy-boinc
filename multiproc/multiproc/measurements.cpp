@@ -135,7 +135,7 @@ static DWORD measurements_proc(LPVOID param)
 			h->os_name, h->os_version,
 			h->m_nbytes, h->m_swap);
 
-	printf("TEST info_buffer: %s", info_buffer);
+	//printf("TEST info_buffer: %s", info_buffer);
 
 	//winsocket_send(buffer);
 
@@ -190,7 +190,11 @@ static DWORD measurements_proc(LPVOID param)
 		
 		buffer[1023] = 0;
 
-		printf("TEST cpu_buffer: %s", buffer);
+		//
+		//printf("TEST cpu_buffer: %s", buffer);
+		printf("Cpu load: %f\n", cpu_load);
+		printf("Cpu freq: %f\n", cpu_frequency);
+
 		winsocket_send(buffer);
 
 		Sleep(1000);
@@ -221,8 +225,10 @@ int measurements_start() {
 int measurements_stop()
 {
 	measurements_continue = 0;
-    WaitForSingleObject(measurements_thread, INFINITE);
-    CloseHandle(measurements_thread);
-	measurements_thread = NULL;
+	if (measurements_thread) {
+		WaitForSingleObject(measurements_thread, INFINITE);
+		CloseHandle(measurements_thread);
+		measurements_thread = NULL;
+	}
 	return 0;
 }
