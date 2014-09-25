@@ -105,13 +105,17 @@ static int serverSocketAccept(int serverSocket)
 
 static int socketSend(int socket, const char* data) 
 {
+        //printf("serverSocketSend BEGIN: %d\n", socket);
+        //printf("serverSocketSend data: %s\n", data);
         int data_sent = send(socket, data, (int)strlen(data), 0);
-        printf("serverSocketSend\n");
+        //printf("serverSocketSend data: %s\n", data);
         if (data_sent == -1) {
                 printf("send test error...\n");
         } else {
                 printf("data sent: %d\n", data_sent);
         }
+
+        //printf("serverSocketSend END\n");
 
         return data_sent;
 }
@@ -351,6 +355,7 @@ int viewers_add(int socket)
 
 int viewers_send(const char* msg)
 {
+        printf("viewers_send BEGIN:\n");
         int success = 0;
         for (int i = 0; i < MAX_VIEWERS; i++) {
                 viewer_t* v = _viewers[i];
@@ -358,14 +363,18 @@ int viewers_send(const char* msg)
                         printf("viewers_send socket: %d\n", v->socket);
                         if (v->socket != -1) {
                                 if (socketSend(v->socket, msg) == -1) {
-                                        if (_viewers[i]) {
-                                                free(_viewers[i]);
+                                        if (v) {
+                                                printf("free viewer!\n");                                      
+                                                delete_viewer(v);
                                                 _viewers[i] = NULL;
                                         }
+                                } else {
+                                        success++;
                                 }
                         }
                 }
         }
+        printf("viewers_send END:\n");
         return success;
 }
 
@@ -519,9 +528,8 @@ static char * create_csv_message(int id, experiment_t* e, double delta_t, double
 
         memset(csv_msg, 0, sizeof(csv_msg));
 
-        sprintf(csv_msg,"data;%d;%f;%f;%f;%f;%f;%f;%f;%f;%f;\n",
+        sprintf(csv_msg,"data;%d;%f;%f;%f;%f;%f;%f;%f;%f;\n",
                 id,
-                e->cpu_usage,
                 e->cpu_load,
                 e->cpu_load_idle,
                 e->cpu_load_sys,
@@ -554,9 +562,8 @@ static char * create_csv_message_light(int id, experiment_t* e, double delta_t, 
 
         memset(csv_msg_light, 0, sizeof(csv_msg_light));
 
-        sprintf(csv_msg_light,"data;%d;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;\n",
+        sprintf(csv_msg_light,"data;%d;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;\n",
                 id,
-                e->cpu_usage,
                 e->cpu_load,
                 e->cpu_load_idle,
                 e->cpu_load_sys,
@@ -598,7 +605,7 @@ static const char* get_timestamp()
 
 static int _hosts_continue = 1;
 void hosts_remove(int id);
-#define MAX_EXPERIMENTS (6*3)+1
+#define MAX_EXPERIMENTS (10*3)+1
 
 typedef struct _host_t {
         int id;
@@ -1101,18 +1108,20 @@ int server_socket = -1;
 
 void signal_handler(int signum)
 {
-        printf("signal_handler begin");
+        printf("signal_handler begin\n");
 
         signaled = 1;
         meters_stop();
         //hosts_stop();
         closeServerSocket(server_socket);
         server_socket = -1;
-        closeServerSocket(viewer_server->socket);
-        viewer_server->socket = -1;
+        if (viewer_server) {
+                closeServerSocket(viewer_server->socket);
+                viewer_server->socket = -1;
+        }
         hosts_delete();
 
-        printf("signal_handler end");
+        printf("signal_handler end\n");
 }
 
 /* -------------------------------------------------*/
