@@ -30,7 +30,7 @@ public class EnergyViewer extends JFrame
                 public double kflops;
                 */
 
-                public String cpu_usage;
+                //public String cpu_usage;
                 public String cpu_load;
                 public String cpu_load_idle;
                 public String cpu_load_sys;
@@ -52,7 +52,7 @@ public class EnergyViewer extends JFrame
                 public double energy_comp;
 
                 Values() {
-                        cpu_usage = new String();
+                        //cpu_usage = new String();
                         cpu_load = new String();
                         cpu_load_idle = new String();
                         cpu_load_sys = new String();
@@ -66,7 +66,7 @@ public class EnergyViewer extends JFrame
 
                 
                 public void clear() {
-                        cpu_usage = "";
+                        //cpu_usage = "";
                         cpu_load = "";
                         cpu_load_idle = "";
                         cpu_load_sys = "";
@@ -82,7 +82,7 @@ public class EnergyViewer extends JFrame
 
                         System.out.println("Values.print():");
                         System.out.println("Id: " + this.id);
-                        System.out.println("CpuUsage: " + this.cpu_usage);
+                        //System.out.println("CpuUsage: " + this.cpu_usage);
                         System.out.println("Cpuload: " + this.cpu_load);
                         System.out.println("CpuLoadIdle: " + cpu_load_idle);
                         System.out.println("CpuLoadSys: " + cpu_load_sys);
@@ -117,6 +117,7 @@ public class EnergyViewer extends JFrame
         class Viewer extends JPanel
         {
 
+                public static final int MapSize = 5;
                 public Values [] map;
 
                 private static final int step_x = 50;
@@ -126,8 +127,8 @@ public class EnergyViewer extends JFrame
                 Viewer()
                 {
 
-                        map = new Values[10];
-                        for (int i = 0; i < 10; i++) {
+                        map = new Values[MapSize];
+                        for (int i = 0; i < MapSize; i++) {
                                 map[i] = new Values();
                         }
                 }
@@ -159,11 +160,11 @@ public class EnergyViewer extends JFrame
                         int yc = getHeight() / 2;
                         int r = xc / 2;
                         
-                        g2.setColor(new Color(255, 0, 0, 200));
-                        g2.fillOval(xc - r, yc - r, 2 * r, 2 * r);	
+                        //g2.setColor(new Color(255, 0, 0, 200));
+                        //g2.fillOval(xc - r, yc - r, 2 * r, 2 * r);	
  
                         g.setColor(Color.black);
-                        g.drawString("TEST", 150, 150);
+                        //g.drawString("TEST", 150, 150);
                         
                         // Apply left margin
 
@@ -183,19 +184,18 @@ public class EnergyViewer extends JFrame
                         g.translate(0, 20);
                         // Draw "Header"
                         g.drawString("slot", step_x * 0, 0);
-                        g.drawString("usage", step_x * 1, 0);
-                        g.drawString("load", step_x * 2, 0);
-                        g.drawString("idle", step_x * 3, 0);
-                        g.drawString("sys", step_x * 4, 0);
-                        g.drawString("user", step_x * 5, 0);
-                        g.drawString("comp", step_x * 6, 0);
-                        g.drawString("freq", step_x * 7, 0);
-                        g.drawString("deltaT", step_x * 8, 0);
-                        g.drawString("deltaE", step_x * 9, 0);
+                        g.drawString("load", step_x * 1, 0);
+                        g.drawString("idle", step_x * 2, 0);
+                        g.drawString("sys", step_x * 3, 0);
+                        g.drawString("user", step_x * 4, 0);
+                        g.drawString("comp", step_x * 5, 0);
+                        g.drawString("freq", step_x * 6, 0);
+                        g.drawString("deltaT", step_x * 7, 0);
+                        g.drawString("deltaE", step_x * 8, 0);
                         
-                        for (int i = 0; i < 10; i++) {
+                        for (int i = 0; i < MapSize; i++) {
                                 Values v = map[i];
-                                g.translate(0, 20);
+                                g.translate(0, 40);
                                 drawValues(g, v);
                         }
                 }
@@ -205,22 +205,21 @@ public class EnergyViewer extends JFrame
                         if (v != null) {
 
                                 g.drawString(String.valueOf(v.id), step_x* 0, 0);
-                                g.drawString(v.cpu_usage, step_x* 1, 0);
-                                g.drawString(v.cpu_load, step_x* 2, 0);
-                                g.drawString(v.cpu_load_idle, step_x* 3, 0);
-                                g.drawString(v.cpu_load_sys, step_x* 4, 0);
-                                g.drawString(v.cpu_load_user, step_x* 5, 0);
-                                g.drawString(v.cpu_load_comp, step_x* 6, 0);
-                                g.drawString(v.frequency, step_x* 7, 0);
-                                g.drawString(v.delta_time, step_x* 8, 0);
-                                g.drawString(v.delta_energy, step_x* 9, 0);
+                                g.drawString(v.cpu_load, step_x* 1, 0);
+                                g.drawString(v.cpu_load_idle, step_x* 2, 0);
+                                g.drawString(v.cpu_load_sys, step_x* 3, 0);
+                                g.drawString(v.cpu_load_user, step_x* 4, 0);
+                                g.drawString(v.cpu_load_comp, step_x* 5, 0);
+                                g.drawString(v.frequency, step_x* 6, 0);
+                                g.drawString(v.delta_time, step_x* 7, 0);
+                                g.drawString(v.delta_energy, step_x* 8, 0);
                         }
                 }
 
 
                 public void read(String csvStr) {
                         
-                        System.out.println("READ:");
+                        //System.out.println("READ:");
                         String[] s = csvStr.split(";");
                         
                         int id = Integer.parseInt(s[Value.Id.val()]);
@@ -230,7 +229,7 @@ public class EnergyViewer extends JFrame
                         v.clear();
                 
                         v.id = id;//Integer.parseInt(s[Value.Id.val()]);
-                        
+                        /*
                         System.out.println("Id: " + v.id);
                         System.out.println("CpuUsage: " + s[Value.CpuUsage.val()]);
                         System.out.println("Cpuload: " + s[Value.CpuLoad.val()]);
@@ -239,8 +238,7 @@ public class EnergyViewer extends JFrame
                         System.out.println("CpuLoadUser: " + s[Value.CpuLoadUser.val()]);
                         System.out.println("CpuLoadComp: " + s[Value.CpuLoadComp.val()]);
                         //System.out.println("Kflops: " + s[Value.Kflops.val()]);
-                        
-                        v.cpu_usage = s[Value.CpuUsage.val()];
+                        */
                         v.cpu_load = s[Value.CpuLoad.val()];
                         v.cpu_load_idle = s[Value.CpuLoadIdle.val()];
                         v.cpu_load_sys = s[Value.CpuLoadSys.val()];
@@ -251,7 +249,7 @@ public class EnergyViewer extends JFrame
                         v.delta_time = s[Value.DeltaTime.val()];
                         v.delta_energy = s[Value.DeltaEnergy.val()];
                         
-                        v.print();
+                        //v.print();
                         
                         /*
                           System.out.println("Cpuload: " + v[Value.CpuLoad.val()]);
@@ -281,7 +279,11 @@ public class EnergyViewer extends JFrame
 
         EnergyViewer() throws Exception 
         {
+                addKeyListener(new KeyHandler());
+
                 viewer = new Viewer();
+
+                //viewer.add(this);
                 add(viewer, BorderLayout.CENTER);
 
                 setExtendedState(Frame.MAXIMIZED_BOTH);  
@@ -339,7 +341,7 @@ public class EnergyViewer extends JFrame
         
         public enum Value
         {
-                Name(0), Id(1), CpuUsage(2), CpuLoad(3), CpuLoadIdle(4), CpuLoadSys(5), CpuLoadUser(6), CpuLoadComp(7), Frequency(8), DeltaTime(9), DeltaEnergy(10), NumValue(11);
+                Name(0), Id(1), CpuLoad(2), CpuLoadIdle(3), CpuLoadSys(4), CpuLoadUser(5), CpuLoadComp(6), Frequency(7), DeltaTime(8), DeltaEnergy(9), NumValue(10);
 
                 private int num;
                 private Value(int i) {
@@ -354,20 +356,52 @@ public class EnergyViewer extends JFrame
                 viewer.read(str);
         }
 
+        private static boolean need_exit = false;
+        public static Socket socket1;
+        public static BufferedReader br;
+        // This method will run when any key is pressed in the window
+        class KeyHandler extends KeyAdapter {
+
+                public void keyPressed(KeyEvent e)
+                {                
+                        if (e.getKeyChar() == 'q') {
+                                System.out.println("Exiting");
+                                need_exit = true;
+                                try {
+                                        br.close(); 
+                                        socket1.close();
+
+                                } catch(java.io.IOException f) {
+                                        // this is executed when an exception (in this example InterruptedException) occurs
+                                        System.out.println("catch A");
+                                }
+
+
+                
+                                //System.exit(0);
+                        }
+                        else if (e.getKeyChar() == 'z') {
+                                System.out.println("Resizing");
+                        }
+                }
+                
+        }
         public static void main(String[] args) throws Exception
         {
                 EnergyViewer ev = new EnergyViewer();
 
+
                 System.out.println("TEST !!!");
                 //viewer.updateValues();
                 
-                Socket socket1;
+                //Socket socket1;
                 int portNumber = 2015;
                 String str = "initialize";
                 
                 socket1 = new Socket(InetAddress.getLocalHost(), portNumber);
                 
-                BufferedReader br = new BufferedReader(new InputStreamReader(socket1.getInputStream()));
+                br = new BufferedReader(new InputStreamReader(socket1.getInputStream()));
+                //BufferedReader br = new BufferedReader(new InputStreamReader(socket1.getInputStream()));
                 
                 //PrintWriter pw = new PrintWriter(socket1.getOutputStream(), true);
                 
@@ -383,7 +417,7 @@ public class EnergyViewer extends JFrame
                 System.out.println("before loop");
                 int i = 0;
                 //while (true) {
-                while ((str = br.readLine()) != null) {
+                while ((str = br.readLine()) != null && need_exit == false) {
                         System.out.println("in loop test");
                         System.out.println(str);
                         
@@ -419,8 +453,8 @@ public class EnergyViewer extends JFrame
                 }
                 
                 //System.out.println("close...");
-                //br.close();
-                //socket1.close();
+                br.close();
+                socket1.close();
                 /*
                   
                         */
