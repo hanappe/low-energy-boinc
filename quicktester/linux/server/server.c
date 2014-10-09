@@ -12,8 +12,13 @@
 #include <sys/time.h>
 #include <pthread.h>
 #include <signal.h>
+
+#include "socket.h"
+#include "viewer.h"
 #include "meter.h"
 #include "log.h"
+
+
 
 static int signaled = 0;
 
@@ -25,359 +30,6 @@ double get_time()
         gettimeofday(&tv, 0);
         return 1.e-6 * tv.tv_usec + tv.tv_sec;
 }
-
-/* -------------------------------------------------*/
-
-static int openServerSocket(const char* address, int port) 
-{
-        struct sockaddr_in sockaddr;
-        struct in_addr addr;
-        int serverSocket = -1;
-
-        if ((address != NULL) && (strcmp(address, "any") != 0)) {
-                int r = inet_aton(address, &addr);
-                if (r == 0) {
-                        log_err("Daemon: Failed to convert '%s' to an IP address...?!\n", address);
-                        return -1;
-                }
-        } else {
-                addr.s_addr = htonl(INADDR_ANY);
-        }
-
-        serverSocket = socket(AF_INET, SOCK_STREAM, 0);
-        if (serverSocket == -1) {
-                log_err("Daemon: Failed to create server socket\n");
-                return -1;
-        }
-
-        memset((char *)&sockaddr, 0, sizeof(struct sockaddr_in));
-        sockaddr.sin_family = AF_INET;
-        sockaddr.sin_addr = addr;
-        sockaddr.sin_port = htons(port);
-
-        if (bind(serverSocket, (const struct sockaddr *) &sockaddr, 
-                 sizeof(struct sockaddr_in)) == -1) {
-                close(serverSocket);
-                serverSocket = -1;
-                log_err("Daemon: Failed to bind server socket\n");
-                return -1;
-        }
-        
-        if (listen(serverSocket, 10) == -1) {
-                close(serverSocket);
-                serverSocket = -1;
-                log_err("Daemon: Failed to bind server socket\n");
-                return -1;
-        }
-
-        return serverSocket;
-}
-
-static void closeServerSocket(int serverSocket) 
-{
-        if (serverSocket != -1) {
-                close(serverSocket);
-        }
-}
-
-static int serverSocketAccept(int serverSocket) 
-{
-        struct sockaddr_in addr;
-        socklen_t addrlen = sizeof(addr);
-
-        if (serverSocket == -1) {
-                log_err("Daemon: Invalid server socket\n");
-                return -1;
-        }
-  
-        int clientSocket = accept(serverSocket, (struct sockaddr*) &addr, &addrlen);
-  
-        if (clientSocket == -1) {
-                log_err("Daemon: Accept failed\n");
-                return -1;
-        } 
-
-        int flag = 1; 
-        setsockopt(clientSocket, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
-
-        return clientSocket;
-}
-
-static int socketSend(int socket, const char* data) 
-{
-        //printf("serverSocketSend BEGIN: %d\n", socket);
-        //printf("serverSocketSend data: %s\n", data);
-        int data_sent = send(socket, data, (int)strlen(data), 0);
-        //printf("serverSocketSend data: %s\n", data);
-        if (data_sent == -1) {
-                printf("send test error...\n");
-        } else {
-                printf("data sent: %d\n", data_sent);
-        }
-
-        //printf("serverSocketSend END\n");
-
-        return data_sent;
-}
-
-/* -------------------------------------------------*/
-
-
-/* -------------------------------------------------*/
-
-// VIEWER 
-
-typedef struct _viewer_t {
-        //int port;
-        int socket;
-        //pthread_t thread;
-        
-} viewer_t;
-
-/* -------------------------------------------------*/
-
-
-viewer_t* new_viewer(int client_socket)
-{
-        viewer_t* v = (viewer_t*)malloc(sizeof(viewer_t));
-        if (v == NULL) {
-                log_err("new_viewer: out of memory");
-                return NULL;
-        }
-        memset(v, 0, sizeof(viewer_t));
-        v->socket = client_socket;
-        return v;
-}
-
-void delete_viewer(viewer_t* v)
-{
-        if (v) {
-                closeServerSocket(v->socket);
-                v->socket = -1;
-                free(v);
-                v = NULL;
-        }
-}
-
-/*
-static int viewer_init(int port) 
-{
-        pthread_attr_t attr;
-        int ret;
-
-        viewer_t* vs = new_viewer(port);
-        if (vs == NULL) {
-                return -1;
-        }
-
-        ret = pthread_attr_init(&attr);
-        if (ret != 0) {
-                log_err("viewer_init: pthread_attr_init failed");
-                delete_viewer(vs);
-                return -1;
-        }
-                
-        ret = pthread_create(&vs->thread, &attr, &viewer_run, vs);
-        if (ret != 0) {
-                log_err("viewer_init: pthread_create failed");
-                delete_viewer(vs);
-                return -1;
-        }
-
-        return 0;
-}
-*/
-/* -------------------------------------------------*/
-
-#define MAX_VIEWERS 10
-
-static viewer_t* _viewers[MAX_VIEWERS];
-static int _viewers_count = 0;
-
-typedef struct _viewer_server_t {
-
-        int port;
-        int socket;
-        pthread_t thread;
-
-} viewer_server_t;
-
-
-static viewer_server_t* viewer_server = NULL;
-
-viewer_server_t* new_viewer_server(int socket)
-{
-        viewer_server_t* vs = (viewer_server_t*) malloc(sizeof(viewer_server_t));
-        if (vs == NULL) {
-                log_err("new_viewer_server: out of memory");
-                return NULL;
-        }
-        memset(vs, 0, sizeof(viewer_server_t));
-        vs->socket = socket;
-        return vs;
-}
-
-void delete_viewer_server(viewer_server_t* vs)
-{
-        if (vs) {
-                closeServerSocket(vs->socket);
-                vs->socket = -1;
-                free(vs);
-        }
-}
-
-static void* viewer_server_run(void* ptr) 
-{
-        viewer_server_t* vs = (viewer_server_t*) ptr;
-
-        //char * msg = 0;
-
-        while(1) {
-
-                if (signaled)
-                        break;
-                
-                printf("viewer_server_run serverSocketAccept\n");
-                int client = serverSocketAccept(viewer_server->socket);
-                printf("viewer_server_run serverSocketAccept B\n");
-
-                if (client == -1) {
-                        printf("viewer_server_run: client accept error %d\n", client);
-                } else {
-                        printf("viewer_server_run: client accept success %d\n", client);
-                        viewers_add(client);
-                }
-
-                
-                /*
-                int is_connected = 1;
-                while (is_connected) {
-                // if (signaled)
-                //              break;
-                
-                        
-                        char data[256];
-                        memset(data, 0, sizeof(data));
-                        sprintf(data, "date;data;1;5.3;4.4;5.5;6.6;7.7;8.8;5.9;10.10;11.11;\n");
-                        //printf("send...\n");
-                        int data_sent = send(client, data, (int)strlen(data), 0);
-                        //printf("debug send\n");
-                        if (data_sent == -1) {
-                                is_connected = 0;
-                                printf("send test error...\n");
-                        } else {
-                                printf("data sent: %d\n", data_sent);
-                        }
-                        
-                        //create_viewer_message();
-        
-                        //msg = create_csv_message(0, NULL);
-                        //viewers_send(msg);
-                        //if (msg) {
-                        //        free(msg);
-                        //}
-                        
-                        usleep(1000000);
-                }
-        */
-                //usleep(1000000);
-
-
-        }
-
-        closeServerSocket(vs->socket);
-        vs->socket = -1;        
-        return 0;
-}
-
-        
-static int viewer_server_init(int port) {
-
-        pthread_attr_t attr;
-        int ret;
-
-        int socket = openServerSocket(NULL, port); 
-        if (socket == -1) {
-                log_err("viewer_server_init: failed to create the server socket. exiting.");
-                return -1;
-        }
-
-        viewer_server = new_viewer_server(socket);
-        
-        if (viewer_server == NULL) {
-                return -1;
-        }
-
-        ret = pthread_attr_init(&attr);
-        if (ret != 0) {
-                log_err("viewer_server_init: pthread_attr_init failed");
-                delete_viewer_server(viewer_server);
-                return -1;
-        }
-                
-        ret = pthread_create(&viewer_server->thread, &attr, &viewer_server_run, viewer_server);
-        if (ret != 0) {
-                log_err("viewer_init: pthread_create failed");
-                delete_viewer_server(viewer_server);
-                return -1;
-        }
-
-        return 0;
-
-}
-
-int viewers_init()
-{
-        for (int i = 0; i < MAX_VIEWERS; i++)
-                _viewers[i] = NULL;
-
-        return 0;
-}
-
-
-int viewers_add(int socket)
-{
-        if (_viewers_count >= MAX_VIEWERS) {
-                log_err("viewers_add: maximum number of viewers reached");                
-                return -1;
-        }
-
-        viewer_t* v = new_viewer(socket);
-        if (v == NULL) {
-                return -1;
-        }
-
-        _viewers[_viewers_count++] = v;
-
-        return 0;
-}
-
-
-int viewers_send(const char* msg)
-{
-        printf("viewers_send BEGIN:\n");
-        int success = 0;
-        for (int i = 0; i < MAX_VIEWERS; i++) {
-                viewer_t* v = _viewers[i];
-                if (v) {
-                        printf("viewers_send socket: %d\n", v->socket);
-                        if (v->socket != -1) {
-                                if (socketSend(v->socket, msg) == -1) {
-                                        if (v) {
-                                                printf("free viewer!\n");                                      
-                                                delete_viewer(v);
-                                                _viewers[i] = NULL;
-                                        }
-                                } else {
-                                        success++;
-                                }
-                        }
-                }
-        }
-        printf("viewers_send END:\n");
-        return success;
-}
-
 
 /* -------------------------------------------------*/
 
@@ -478,13 +130,13 @@ typedef struct _experiment_t {
         // fields set and updated by remote host
         char name[64];
         
-        double cpu_usage;
-        double cpu_load;
-        double cpu_load_idle;
-        double cpu_load_sys;
-        double cpu_load_user;
-        double cpu_load_comp;
-        double cpu_frequency;
+        double cpu_usage; // range [0.-1.0]
+        double cpu_load; // range [0.-1.0]
+        double cpu_load_idle; // range [0.-1.0]
+        double cpu_load_sys; // range [0.-1.0]
+        double cpu_load_user; // range [0.-1.0]
+        double cpu_load_comp; // range [0.-1.0]
+        double cpu_frequency; // in MHz
         double kflops;
 
         // fields that are updated locally
@@ -616,8 +268,8 @@ typedef struct _host_t {
         int num_experiments;
         experiment_t* cur_experiment;
         double idle_power;
-        char filename[256];
-        FILE* file;
+        FILE* file_csv;
+        FILE* file_info;
         
         // Computer info
         char cpu_vendor[256];
@@ -628,7 +280,7 @@ typedef struct _host_t {
 
 } host_t;
 
-void host_log(host_t* host, const char * format, ...) {
+void host_log_csv(host_t* host, const char * format, ...) {
 
         char buffer[1024];
         va_list ap;
@@ -638,8 +290,23 @@ void host_log(host_t* host, const char * format, ...) {
         buffer[1023] = 0;
         va_end(ap);
 
-        fprintf(host->file, "%s;%s\n", get_timestamp(), buffer);
-        fflush(host->file);
+        fprintf(host->file_csv, "%s;%s\n", get_timestamp(), buffer);
+        fflush(host->file_csv);
+
+}
+
+void host_log_info(host_t* host, const char * format, ...) {
+
+        char buffer[1024];
+        va_list ap;
+
+        va_start(ap, format);
+        vsnprintf(buffer, 1024, format, ap);
+        buffer[1023] = 0;
+        va_end(ap);
+
+        fprintf(host->file_info, "%s\n", buffer);
+        fflush(host->file_info);
 
 }
 
@@ -655,23 +322,46 @@ host_t* new_host(int id, int socket, meter_t* meter)
         host->socket = socket;
         host->meter = meter;
 
+
+        // File
+
+        char filename[256];
+        memset(filename, 0, sizeof(filename));
+
+        // File csv
+
         time_t t = get_current_time();
         struct tm tm;
         localtime_r(&t, &tm);
-        sprintf(host->filename, "%02d.%02d.%02d.slot%d.data.csv", tm.tm_hour, tm.tm_min, tm.tm_sec, id);
+        sprintf(filename, "%02d.%02d.%02d.slot%d.data.csv", tm.tm_hour, tm.tm_min, tm.tm_sec, id);
 
-        printf("new host name: %s\n", host->filename);
 
-        host->file = fopen(host->filename, "a");
-        if (host->file == NULL) {
+        printf("new host name: %s\n", filename);
+
+        host->file_csv = fopen(filename, "a");
+        if (host->file_csv == NULL) {
                 log_err("can't create new host file!\n");
         }
 
-        printf("slot: %d\n", id);
-        char msg[256];
-        memset(msg, 0, sizeof(msg));
-        host_log(host, "connected;slot%d;", id);
+        host_log_csv(host, "connected;slot%d;", id);
 
+        // File summary
+
+        memset(filename, 0, sizeof(filename));
+        sprintf(filename, "%02d.%02d.%02d.slot%d.info", tm.tm_hour, tm.tm_min, tm.tm_sec, id);
+
+        host->file_info = fopen(filename, "a");
+        if (host->file_info == NULL) {
+                log_err("can't create new host file_summary!\n");
+        }
+
+
+        host_log_info(host,
+                 "T\tE\tEidle\tEsys\t"
+                 "E_user\tE_comp\tavg Watt\tkflops\tkflops/J"
+                 );
+        host_log_info(host,
+                 "");
 
         return host;
 }
@@ -708,7 +398,7 @@ int host_start_experiment(host_t* host, message_t* m)
         host->experiments[host->num_experiments++] = experiment;
         host->cur_experiment = experiment;
 
-        host_log(host, "start_experiment;%s;", experiment->name);
+        host_log_csv(host, "start_experiment;%s;", experiment->name);
 
         return 0;
 }
@@ -738,10 +428,21 @@ int host_stop_experiment(host_t* host, message_t* m)
                  e->energy / (e->time_end - e->time_start), 
                  e->kflops, e->kflops / e->energy);
 
-        host_log(host, "stop_experiment;%s;"
+        host_log_csv(host, "stop_experiment;%s;"
                  "%f;%f;%f;%f;"
                  "%f;%f;%f;%f;%f;",
                  e->name,
+                 e->time_end - e->time_start,
+                 e->energy, e->energy_idle, e->energy_sys,
+                 e->energy_user, e->energy_comp,  
+                 e->energy / (e->time_end - e->time_start), 
+                 e->kflops, e->kflops / e->energy
+                 );
+
+        host_log_info(host, "%s:", e->name);
+        host_log_info(host,
+                 "%.2f\t%.2f\t%.2f\t%.2f\t"
+                 "%.2f\t%.2f\t%.2f\t%.2f\t%.2f",
                  e->time_end - e->time_start,
                  e->energy, e->energy_idle, e->energy_sys,
                  e->energy_user, e->energy_comp,  
@@ -764,17 +465,17 @@ int host_experiment_set(host_t* host, message_t* m)
         //log_info("host_experiment_set: %s=%f.", m->name, m->value);
 
         if (strcmp(m->name, "cpu_usage") == 0) 
-                host->cur_experiment->cpu_usage = m->value;
+                host->cur_experiment->cpu_usage = m->value / 100.;
         else if (strcmp(m->name, "cpu_load") == 0) 
-                host->cur_experiment->cpu_load = m->value;
+                host->cur_experiment->cpu_load = m->value / 100.;
         else if (strcmp(m->name, "cpu_load_idle") == 0) 
-                host->cur_experiment->cpu_load_idle = m->value;
+                host->cur_experiment->cpu_load_idle = m->value / 100.;
         else if (strcmp(m->name, "cpu_load_sys") == 0) 
-                host->cur_experiment->cpu_load_sys = m->value;
+                host->cur_experiment->cpu_load_sys = m->value / 100.;
         else if (strcmp(m->name, "cpu_load_user") == 0) 
-                host->cur_experiment->cpu_load_user = m->value;
+                host->cur_experiment->cpu_load_user = m->value / 100.;
         else if (strcmp(m->name, "cpu_load_comp") == 0) 
-                host->cur_experiment->cpu_load_comp = m->value;
+                host->cur_experiment->cpu_load_comp = m->value / 100.;
         else if (strcmp(m->name, "cpu_frequency") == 0) 
                 host->cur_experiment->cpu_frequency = m->value;
         else if (strcmp(m->name, "kflops") == 0) 
@@ -815,7 +516,7 @@ int host_experiment_update(host_t* host, message_t* m)
 
         
         // Write msg (csv line) in file
-        host_log(host, msg);
+        host_log_csv(host, msg);
 
         // Send the light version to all connected viewers
         viewers_send(msg_light);
@@ -854,7 +555,7 @@ int host_experiment_updatecompinfo(host_t* host, message_t* m)
 {
 
         // Write csv line in file
-        host_log(host, "compinfo;%s;%s;%s;%s;%s;", host->cpu_vendor, host->cpu_model, host->cpu_number, host->os_name, host->os_version);
+        host_log_csv(host, "compinfo;%s;%s;%s;%s;%s;", host->cpu_vendor, host->cpu_model, host->cpu_number, host->os_name, host->os_version);
 
         return 0;
 }
@@ -1086,7 +787,10 @@ void hosts_stop()
 
         for (int i = 0; i < _hosts_count; i++) {
                 void *retval;
-                pthread_join(_hosts[i]->thread, &retval);
+                host_t * h = _hosts[i];
+                if (h) {
+                        pthread_join(h->thread, &retval);
+                }        
         }
 }
 
@@ -1105,26 +809,47 @@ int server_socket = -1;
 /* -------------------------------------------------*/
 
 
+static int main_ended = 0;
+
+void main_end() {
+
+        if (!main_ended) {
+                printf("Finalizing...\n");
+                
+                closeServerSocket(server_socket);
+                server_socket = -1;
+                
+                
+                viewer_server_end();
+                
+                hosts_stop();
+                
+                hosts_delete();
+                
+                meters_stop();
+                
+                if (meters_fini() != 0) {
+                        log_err("main: failed to finalize the meters");
+                        exit(1);
+                }
+        }
+
+        main_ended = 1;
+}
+
+
+
+/* -------------------------------------------------*/
 
 void signal_handler(int signum)
 {
-        printf("signal_handler begin\n");
-
         signaled = 1;
-        meters_stop();
-        //hosts_stop();
-        closeServerSocket(server_socket);
-        server_socket = -1;
-        if (viewer_server) {
-                closeServerSocket(viewer_server->socket);
-                viewer_server->socket = -1;
-        }
-        hosts_delete();
 
-        printf("signal_handler end\n");
+        main_end();
 }
 
 /* -------------------------------------------------*/
+
 
 int main(int argc, char** argv)
 {
@@ -1171,9 +896,8 @@ int main(int argc, char** argv)
                 if (signaled)
                         break;
                 
-                printf("main serverSocketAccept\n");
+                printf("waiting for client...\n");
                 int client = serverSocketAccept(server_socket);
-                printf("main serverSocketAccept B\n");
                 if (signaled)
                         break;
                 if (client == -1)
@@ -1206,18 +930,7 @@ int main(int argc, char** argv)
                 hosts_add(id, client, meter);
         }
 
-        closeServerSocket(server_socket);
-        server_socket = -1;
-        printf("Finalizing...\n");
-
-        meters_stop();
-
-        if (meters_fini() != 0) {
-                log_err("main: failed to finalize the meters");
-                exit(1);
-        }
-
-        hosts_stop();
+        main_end();
 
         return 0;
 }

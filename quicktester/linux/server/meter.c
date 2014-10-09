@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <ctype.h>
+
 #include "log.h"
 #include "meter.h"
 
