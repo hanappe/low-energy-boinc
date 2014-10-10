@@ -28,6 +28,7 @@ void delete_computation_data(computation_data_t* d);
 
 // Standard or with driver
 void set_computation_mode(int mode);
+int get_computation_mode();
 
 void linpack_main(computation_data_t* d);
 void linpack_lpc_main(computation_data_t* d);

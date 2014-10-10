@@ -19,9 +19,9 @@ int counter_init()
 
 double counter_get()
 {
-    //LARGE_INTEGER li;
-    //QueryPerformanceCounter(&li);
-    //return (double)(li.QuadPart-counter_start) / pcfreq;
+    LARGE_INTEGER li;
+    QueryPerformanceCounter(&li);
+    return (double)(li.QuadPart-counter_start) / pcfreq;
 
-	return (double) GetTickCount64() / 1000.0;
+	//return (double) GetTickCount64() / 1000.0;
 }

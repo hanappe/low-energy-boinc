@@ -81,15 +81,13 @@ void linpack_lpc_main(computation_data_t* d)
 	int arsize = d->size;
 	int ret;
 
-	printf("linpack_lpc_main\n");
-
+	
 	lpci = LPCInterfaceNew();
 
 	if (lpci == NULL) {
 		printf("linpack_lpc_main, LPCInterfaceNew() failed, driver not installed ?\n");
 		return;
 	}
-
 	
 	ret = LPCGetConfig(lpci, &cfg);
 	if (ret != 0) {
@@ -106,8 +104,6 @@ void linpack_lpc_main(computation_data_t* d)
 		LPCInterfaceDelete(lpci);
 		return;
 	}
-
-	printf("LPCInterfaceNew OK\n");
 
     arsize2d = (long)arsize*(long)arsize;
     memreq=arsize2d*sizeof(REAL)+(long)arsize*sizeof(REAL)+(long)arsize*sizeof(int);
@@ -962,7 +958,7 @@ static REAL second(void)
         //LPCSetPstate(lpci); // TODO
 
 		for (i = 0; i < stats->NumCPUs; i++) {
-			int ret = LPCSetPstate(lpci, i, 2);
+			int ret = LPCSetPstate(lpci, i, 100);
 			if (ret != 0) {
 				printf("LPCSetPstate error: %s\n", LPCGetErrorMessage(lpci));
 			}

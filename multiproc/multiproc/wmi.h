@@ -64,10 +64,18 @@ int wmi_get_cpu_comp_user_sys(
 //int wmi_get_memory(...);
 //int wmi_get_memory(...);
 
+// Get Battery Info
+
+int wmi_get_battery_info(
+);
+
+int wmi_get_battery_info2(
+);
+
 void wmi_free();
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif _WMI_H_
+#endif // _WMI_H_

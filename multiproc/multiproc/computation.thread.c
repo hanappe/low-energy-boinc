@@ -31,6 +31,10 @@ void set_computation_mode(int mode) {
 	_computation_mode = mode;
 }
 
+int get_computation_mode() {
+	return _computation_mode;
+}
+
 
 enum {
 	NO_PROCESS = 0,

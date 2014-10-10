@@ -12,4 +12,4 @@ double counter_get();
 }
 #endif
 
-#endif _COUNTER_H_
+#endif // _COUNTER_H_

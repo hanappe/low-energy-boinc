@@ -3,6 +3,7 @@
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -13,14 +14,17 @@
 
 static SOCKET _socket = INVALID_SOCKET;
 
-int winsocket_init()
+int winsocket_init(const char * address)
 {
 	struct addrinfo* _result = NULL;
     struct addrinfo* _ptr = NULL;
     struct addrinfo _hints;
 	// Temp var, for testing
-	char address[] = "10.0.1.114";
+	//char address[] = "10.0.1.114";
 	//char address[] = "10.0.1.202";
+	//char address[] = "10.10.10.1";
+	//char address[] = "192.168.0.175";
+	//char * address = NULL;
 	char port[] = "2014";
     WSADATA InitData;
 	int res;
@@ -78,16 +82,21 @@ int winsocket_send(const char * data)
 {
 	int data_sent;
 
-	printf("send data");
+	//printf("send data");
+	if (_socket == INVALID_SOCKET) {
+		printf("winsocket_send, failed: invalid socket.\n");
+	} else {
+		data_sent = send(_socket, data, (int)strlen(data), 0 );
+		if (data_sent == SOCKET_ERROR) {
+			printf("send failed with error: %d\n", WSAGetLastError());
+			//WSACleanup();
+			winsocket_end();
+			return -1;
+		}
 
-	data_sent = send(_socket, data, (int)strlen(data), 0 );
-	if (data_sent == SOCKET_ERROR) {
-		printf("send failed with error: %d\n", WSAGetLastError());
-		WSACleanup();
-		return -1;
 	}
 
-	printf("data sent: %d\n", data_sent);
+	//printf("data sent: %d\n", data_sent);
 	return data_sent;
 }
 
@@ -106,7 +115,7 @@ int winsocket_end()
 		// cleanup
 		closesocket(_socket);
 
-		_socket = -1;
+		_socket = INVALID_SOCKET;
 	}
 
  	WSACleanup();

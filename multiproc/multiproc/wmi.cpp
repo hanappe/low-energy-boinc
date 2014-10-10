@@ -28,6 +28,28 @@ static bstr_t _username = bstr_t("");
 static long long _current_process_id = 0;
 static int _initialized = 0;
 
+
+static void Print(std::wostream& stream, const VARIANT& v) {
+	
+		switch (v.vt) {
+			case VT_EMPTY:
+				stream << L"(empty)" << std::endl;
+				return;
+			case VT_BSTR:
+				stream << L"VT_BSTR " << v.bstrVal << std::endl;
+				return;
+			case VT_I4:
+				stream << L"VT_I4 " << v.intVal << std::endl;
+			   return;
+			case VT_NULL:
+				stream << L"(null)" << std::endl;
+				return;
+			default:
+				stream << L"(unknown type)";
+				return;
+		}
+}
+
 // Split std::string
 
 char* token;
@@ -143,7 +165,7 @@ static int get_username() {
 	if (enumerator)
 		enumerator->Release();
 
-	std::cout << "get_username(): " << _username << std::endl;
+	//std::cout << "get_username(): " << _username << std::endl;
 
 	return res;
 }
@@ -177,7 +199,7 @@ static int get_num_core() {
 	if (enumerator)
 		enumerator->Release();
 
-	std::cout << "get_num_core(): " << _num_core << std::endl;
+	//std::cout << "get_num_core(): " << _num_core << std::endl;
 
 	return res;
 }
@@ -294,6 +316,7 @@ int wmi_initialize() {
 	get_initial_values();
 
 	_initialized = 1;
+	return 0;
 }
 
 
@@ -842,7 +865,8 @@ int wmi_get_cpu_frequency(float* pcpu_frequency) {
 
 	if (enumerator)
 		enumerator->Release();	
-	
+
+	return 0;
 }
 
 int wmi_get_cpu_comp_user_sys(float* pcpu_load_comp, float* pcpu_load_user, float* pcpu_load_sys) {
@@ -965,6 +989,115 @@ int wmi_get_cpu_comp_user_sys(float* pcpu_load_comp, float* pcpu_load_user, floa
 	return 0;	
 }
 
+
+int wmi_get_battery_info() {
+
+	std::cout << "wmi_get_battery_info" << std::endl;
+
+	//assert(_initialized);
+	//assert(pcpu_load_comp);
+	//assert(pcpu_load_user);
+	//assert(pcpu_load_sys);
+
+	//float& cpu_load_comp = *pcpu_load_comp;
+	//float& cpu_load_user = *pcpu_load_user;
+	//float& cpu_load_sys = *pcpu_load_sys;
+
+	IEnumWbemClassObject* enumerator = 0;
+	IWbemClassObject* object = 0;
+
+	//cpu_load_comp = 0;
+	//cpu_load_user = 0;
+
+	bool user_logged = false;
+
+	long long current_process_id = _current_process_id;
+
+	
+	enumerator = request(
+		// uint16, uint32, uint16, uint32... 
+		/*bstr_t("SELECT"
+		" Availability, BatteryRechargeTime, BatteryStatus,"
+		"Caption, DesignCapacity, DesignVoltage, FullChargeCapacity"
+		" FROM  Win32_Battery")*/
+		bstr_t("Select * from BatteryStatus where Voltage > 0")
+	);
+		
+	
+	ULONG uReturn;
+	for(;;) {
+		
+		HRESULT result = enumerator->Next(WBEM_INFINITE, 1, &object, &uReturn);
+		std::cout << "after enum" << std::endl;
+		if(0 == uReturn) {
+			break;
+		}
+
+		VARIANT var;
+		VariantInit(&var);
+		result = object->Get(L"Voltage", 0, &var, NULL, NULL );
+		
+		if (SUCCEEDED(result)) {
+			Print(std::wcout, var);
+			//unsigned short v = var.uiVal;
+			//std::cout << "Availability: " << v << std::endl; 
+		}
+		
+		VariantInit(&var);
+		result = object->Get(L"DischargeRate", 0, &var, NULL, NULL );
+		
+		if (SUCCEEDED(result)) {
+			Print(std::wcout, var);
+			//unsigned int v = var.uiVal;
+			//std::cout << "BatteryRechargeTime: " << v << std::endl; 
+		}
+
+		VariantInit(&var);
+		result = object->Get(L"Caption", 0, &var, NULL, NULL );
+		
+		if (SUCCEEDED(result)) {
+			Print(std::wcout, var);
+			//unsigned int v = var.uiVal;
+			//std::cout << "BatteryRechargeTime: " << v << std::endl; 
+		}
+
+		VariantInit(&var);
+		result = object->Get(L"DesignCapacity", 0, &var, NULL, NULL );
+		
+		if (SUCCEEDED(result)) {
+			Print(std::wcout, var);
+			//unsigned int v = var.uiVal;
+			//std::cout << "DesignCapacity: " << v << std::endl; 
+		}
+
+		VariantInit(&var);
+		result = object->Get(L"DesignVoltage", 0, &var, NULL, NULL );
+		
+		if (SUCCEEDED(result)) {
+			Print(std::wcout, var);
+			//unsigned long long v = var.ullVal;
+			//std::cout << "DesignVoltage: " << v << std::endl; 
+		}
+
+		VariantInit(&var);
+		result = object->Get(L"FullChargeCapacity", 0, &var, NULL, NULL );
+		
+		if (SUCCEEDED(result)) {
+			Print(std::wcout, var);
+			//unsigned int v = var.uiVal;
+			//std::cout << "FullChargeCapacity: " << v << std::endl; 
+		}
+
+
+		object->Release();
+	} // for(;;)
+
+	if (enumerator)
+		enumerator->Release();
+
+	return 0;	
+
+}
 
 
 void wmi_free() {

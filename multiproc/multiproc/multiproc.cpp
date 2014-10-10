@@ -12,14 +12,20 @@
 #include "measurements.h"
 #include "winsocket.h"
 
+#include <iostream>
+#include <fstream>
+#include <string>
+
+#define _snprintf _snprintf_s
+#define fopen fopen_s
+
 enum {
 	EXP_IDLE,
-	/*EXP_CPU_100,
-	
+	EXP_CPU_100,
 	EXP_CPU_80,
 	EXP_CPU_60,
 	EXP_CPU_40,
-	EXP_CPU_20,*/
+	EXP_CPU_20,
 	EXP_LPC,
 	EXP_END
 };
@@ -124,7 +130,9 @@ static DWORD experiment_proc(LPVOID param)
 	int size = 4000;
 	int idle_sleep = 1 * 60 * 1000; 
 #else
-	int size = 1000;
+	//int size = 1000;
+	//int idle_sleep = 10 * 1000;
+	int size = 2000;
 	int idle_sleep = 10 * 1000; 
 #endif
 
@@ -139,8 +147,14 @@ static DWORD experiment_proc(LPVOID param)
 		}
 
 		switch (experiment_state) {
-			case EXP_IDLE: throttling_set_cpu_usage(100); compute = 0; break;
-			/*case EXP_CPU_100: {
+			case EXP_IDLE: {
+				printf("state IDLE\n");
+			
+				throttling_set_cpu_usage(100); compute = 0; break;
+				}
+			case EXP_CPU_100: {
+				printf("state 100\n");
+			
 				throttling_set_cpu_usage(100);
 				compute = 1;
 				throttling_set_activation(1);
@@ -148,6 +162,7 @@ static DWORD experiment_proc(LPVOID param)
 				break;
 			}
 			case EXP_CPU_80: {
+				printf("state 80\n");
 				throttling_set_cpu_usage(80);
 				compute = 1;
 				throttling_set_activation(1);
@@ -155,6 +170,7 @@ static DWORD experiment_proc(LPVOID param)
 				break;
 			}
 			case EXP_CPU_60: {
+				printf("state 60\n");
 				throttling_set_cpu_usage(60);
 				compute = 1;
 				throttling_set_activation(1);
@@ -162,6 +178,7 @@ static DWORD experiment_proc(LPVOID param)
 				break;
 			}
 			case EXP_CPU_40: {
+				printf("state 40\n");
 				throttling_set_cpu_usage(40);
 				compute = 1;
 				throttling_set_activation(1);
@@ -169,18 +186,15 @@ static DWORD experiment_proc(LPVOID param)
 				break;
 			}
 			case EXP_CPU_20: {
+				printf("state 20\n");
 				throttling_set_cpu_usage(20);
 				compute = 1;
 				throttling_set_activation(1);
 				set_computation_mode(STANDARD);
 				break;
-			}*/
-			/*case EXP_CPU_80: throttling_set_cpu_usage(80); compute = 1; break;
-			case EXP_CPU_60: throttling_set_cpu_usage(60); compute = 1; break;
-			case EXP_CPU_40: throttling_set_cpu_usage(40); compute = 1; break;
-			case EXP_CPU_20: throttling_set_cpu_usage(20); compute = 1; break;
-			*/
+			}
 			case EXP_LPC: {
+				printf("state LPC Driver \n");
 				throttling_set_activation(0);
 				set_computation_mode(DRIVER);
 				compute = 1;
@@ -218,7 +232,13 @@ static DWORD experiment_proc(LPVOID param)
 					return 1;
 				}
 
-				_snprintf(buffer, sizeof(buffer)-1, "start size-%d_cpu-%d_run-%d\n", size, throttling_get_cpu_usage(), test);
+				const int mode = get_computation_mode(); 
+				if (mode == STANDARD) {
+					_snprintf(buffer, sizeof(buffer)-1, "start size-%d_cpu-%d_run-%d\n", size, throttling_get_cpu_usage(), test);
+				} else if (mode == DRIVER) {
+					_snprintf(buffer, sizeof(buffer)-1, "start size-%d_cpu-100-driver_run%d\n", size, test);
+				}
+
 				buffer[sizeof(buffer)-1] = 0;
 
 				if (winsocket_send(buffer) != -1) {
@@ -227,14 +247,26 @@ static DWORD experiment_proc(LPVOID param)
 
 				for (int i = 0; i < count_cpus(); i++) {
 
-					_snprintf(buffer, sizeof(buffer)-1, "slot-%d_size-%d_cpu-%d_run-%d.txt", i, size, throttling_get_cpu_usage(), test);
+					if (mode == STANDARD) {
+						_snprintf(buffer, sizeof(buffer)-1, "slot-%d_size-%d_cpu-%d_run-%d.txt", i, size, throttling_get_cpu_usage(), test);
+					} else if (mode == DRIVER) {
+						_snprintf(buffer, sizeof(buffer)-1, "slot-%d_size-%d_cpu-100-driver_run%d.txt", i, size, test);
+					}
+
 					buffer[sizeof(buffer)-1] = 0;
 
-					FILE* out = fopen(buffer, "w");
+					FILE* out;
+					if (fopen(&out, buffer, "w") != 0) {
+						log_err("experiment_proc: failed to open file '%s'", buffer);
+						return -1;
+					}
+
+					/*
 					if (out == NULL) {
 						log_err("experiment_proc: failed to open file '%s'", buffer);
 						return 1;
 					}
+					*/
 
 					d[i] = new_computation_data(size, out);
 					if (d[i] == NULL) {
@@ -279,7 +311,7 @@ static DWORD experiment_proc(LPVOID param)
 	}
 
 	log_info("Experiment finished"); 
-	printf("\n\nExperiment finished (with state %d)\n\n", experiment_state);
+	printf("\n\nExperiment finished\n\n", experiment_state);
 
 	winsocket_end();
 	measurements_stop();
@@ -313,34 +345,77 @@ int experiment_stop()
 }
 
 
+namespace {
+
+	std::string getAddress() {
+		std::string filename("ip.config.txt");
+		std::string addr;
+		std::ifstream file(filename.c_str());
+		
+		if (!file.good()) {
+			std::cout << filename << ": open error" << std::endl;
+			return addr;
+			//error
+		}
+
+		std::streamsize size;
+		if (file.seekg(0, std::ios::end).good()) size = file.tellg();
+		if (file.seekg(0, std::ios::beg).good()) size = file.tellg();
+		
+		if (!file.good()) {
+			std::cout << filename << ": file size error " << std::endl;
+		}
+
+		
+		while(std::getline(file, addr)) {
+			std::cout << "ip: " << addr << std::endl;
+		}
+		
+		return addr;
+	}
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
 	if (log_set_file("log.txt") != 0)
 		return 1;
 
-	if (winsocket_init() != 0) {
+	std::string s = getAddress();
+	//if (winsocket_init("192.168.0.175") != 0) {
+	if (winsocket_init(s.c_str()) != 0) {
+		log_err("winsocket_init: failed");
 		//return 1;
 	}
 
-	if (counter_init() != 0)
+	if (counter_init() != 0) {
+		log_err("counter_init: failed");
 		return 1;
+	}
 
-	if (computation_init() != 0)
+	if (computation_init() != 0) {
+		log_err("computation_init: failed");
 		return 1;
+	}
 
-	if (measurements_start() != 0)
-			return 1;
-
-	if (throttling_start() != 0)
+	if (measurements_start() != 0) {
+		log_err("measurements_start: failed");
 		return 1;
+	}
 
-	if (experiment_start() != 0)
+	if (throttling_start() != 0) {
+		log_err("throttling_start: failed");
 		return 1;
+	}
+
+	if (experiment_start() != 0) {
+		log_err("experiment_start: failed");
+		return 1;
+	}
 
 	char buf[80];
 
 	while (experiment_state < EXP_END) {
-        printf("Press [enter] to skip test, [q] to quit:  ");
+        printf("Press [enter] to skip test, [q] to quit: \n");
         fgets(buf, 79, stdin);
 		if (buf[0]=='q' || buf[0]=='Q') {
             log_info("Requested quit\n");
@@ -370,6 +445,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	printf("Press [enter] to close the console");
     fgets(buf, 79, stdin);
 
+	
 	return 0;
 }
 

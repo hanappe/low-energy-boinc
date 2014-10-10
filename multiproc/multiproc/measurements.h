@@ -16,4 +16,4 @@ int measurements_stop();
 }
 #endif
 
-#endif _MEASUREMENTS_H_
+#endif // _MEASUREMENTS_H_
