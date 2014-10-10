@@ -382,7 +382,8 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	std::string s = getAddress();
 	//if (winsocket_init("192.168.0.175") != 0) {
-	if (winsocket_init(s.c_str()) != 0) {
+
+	if (!s.empty() && winsocket_init(s.c_str()) != 0) {
 		log_err("winsocket_init: failed");
 		//return 1;
 	}

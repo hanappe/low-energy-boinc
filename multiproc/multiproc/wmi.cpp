@@ -1016,11 +1016,10 @@ int wmi_get_battery_info() {
 	
 	enumerator = request(
 		// uint16, uint32, uint16, uint32... 
-		/*bstr_t("SELECT"
+		bstr_t("SELECT"
 		" Availability, BatteryRechargeTime, BatteryStatus,"
 		"Caption, DesignCapacity, DesignVoltage, FullChargeCapacity"
-		" FROM  Win32_Battery")*/
-		bstr_t("Select * from BatteryStatus where Voltage > 0")
+		" FROM  Win32_Battery")
 	);
 		
 	
@@ -1028,7 +1027,6 @@ int wmi_get_battery_info() {
 	for(;;) {
 		
 		HRESULT result = enumerator->Next(WBEM_INFINITE, 1, &object, &uReturn);
-		std::cout << "after enum" << std::endl;
 		if(0 == uReturn) {
 			break;
 		}
