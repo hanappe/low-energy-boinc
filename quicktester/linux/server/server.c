@@ -844,8 +844,6 @@ void main_end() {
 void signal_handler(int signum)
 {
         signaled = 1;
-
-        main_end();
 }
 
 /* -------------------------------------------------*/
@@ -898,8 +896,10 @@ int main(int argc, char** argv)
                 
                 printf("waiting for client...\n");
                 int client = serverSocketAccept(server_socket);
+
                 if (signaled)
                         break;
+
                 if (client == -1)
                         continue;
 
