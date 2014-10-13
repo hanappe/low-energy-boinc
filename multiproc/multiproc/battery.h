@@ -18,9 +18,9 @@ int battery_print_info(HANDLE hbat);
 
 // Assuming computer have only one battery
 int battery_get_info(
-	float* current_capacity,
-	float* max_capacity,
-	float* percent_charge
+	float* pcurrent_capacity,
+	float* pmax_capacity,
+	float* plife_percent
 );
 
 

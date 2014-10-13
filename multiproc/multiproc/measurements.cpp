@@ -110,7 +110,7 @@ static DWORD measurements_proc(LPVOID param)
 		buffer[1023] = 0;
 
 		//
-		//printf("TEST cpu_buffer: %s", buffer);
+		printf("TEST cpu_buffer: %s", buffer);
 		//printf("Cpu load: %f\n", cpu_load);
 		//printf("Cpu freq: %f\n", cpu_frequency);
 

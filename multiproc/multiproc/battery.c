@@ -1,5 +1,7 @@
 #include "battery.h"
 
+#include <assert.h>
+
 #include <WINIOCTL.h>
 #include <batclass.h>
 #include <Setupapi.h>
@@ -267,11 +269,89 @@ EnumBatteryDevices(BATTERYENUMPROC lpBatteryEnumProc)
     return TRUE;
 }
 
+
 int battery_get_info(
 	float* current_capacity,
 	float* max_capacity,
-	float* percent_charge
-);
+	float* life_percent)
+{
+	
+
+
+
+	BATTERY_MANUFACTURE_DATE BatteryDate;
+    BATTERY_INFORMATION BatteryInfo;
+    BATTERY_STATUS BatteryStatus;
+    //WCHAR szText[MAX_STR_LEN];
+    HANDLE hHandle;
+
+    INT Index;
+
+	assert(current_capacity);
+	assert(max_capacity);
+	assert(life_percent);
+
+	memset(&BatteryDate, 0, sizeof(BATTERY_MANUFACTURE_DATE));
+	memset(&BatteryInfo, 0, sizeof(BATTERY_INFORMATION));
+	memset(&BatteryStatus, 0, sizeof(BATTERY_STATUS));
+	/*
+	
+	if (BatteryQueryInformation(_bat,
+                                BatteryInformation,
+                                (LPVOID)&BatteryInfo,
+                                sizeof(BatteryInfo)))
+    {
+        // Capacity
+		current_capacity = (float)BatteryInfo.DesignedCapacity;
+        printf("Capacity: %f mWh\n", current_capacity);
+		
+        // Type
+        //GetBatteryTypeString(BatteryInfo, szText, sizeof(szText));
+       
+		// printf("Capacity: %d\n", );
+
+        // Full charged capacity	
+        //Index = IoAddValueName(1, IDS_BAT_FULL_CAPACITY, 1);
+		 printf("FullChargedCapacity: %ld mWh\n", BatteryInfo.FullChargedCapacity);
+		 current_capacity = (float)BatteryInfo.FullChargedCapacity;
+        printf("Capacity: %f mWh\n", current_capacity);
+        // Depreciation
+        //Index = IoAddValueName(1, IDS_BAT_DEPRECIATION, 1);
+
+		printf("Depreciation: %ld mWh\n", 100 - (BatteryInfo.FullChargedCapacity * 100) /
+                       BatteryInfo.DesignedCapacity);
+    }
+	*/
+	/*
+    if (BatteryQueryStatus(_bat,
+                           &BatteryStatus,
+                           sizeof(BatteryStatus)))
+    {
+        // Current capacity 
+        //Index = IoAddValueName(1, IDS_BAT_CURRENT_CAPACITY, 1);
+        printf("Current capacity : %ld mWh (%ld%%)\n",
+                       BatteryStatus.Capacity,
+                       (BatteryStatus.Capacity * 100) / BatteryInfo.FullChargedCapacity
+					   );
+
+
+        // Voltage 
+        //Index = IoAddValueName(1, IDS_BAT_VOLTAGE, 1);
+		if (BatteryStatus.Voltage == BATTERY_UNKNOWN_VOLTAGE ) {
+			BatteryStatus.Voltage = 0;
+		}
+
+        printf("Voltage :%ld mV\n", BatteryStatus.Voltage);
+
+		printf("Rate :%ld mV\n", BatteryStatus.Rate);
+
+        // Status 
+        //Index = IoAddValueName(1, IDS_STATUS, 1);
+        //BatteryPowerStateToText(BatteryStatus.PowerState, szText, sizeof(szText));
+    }
+	*/
+	return 0;
+}
 
 int battery_print_info(HANDLE hbat)
 {
