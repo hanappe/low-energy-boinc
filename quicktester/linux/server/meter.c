@@ -509,6 +509,7 @@ int meter_read_watts(meter_t* m)
 
 float meter_get_energy(meter_t* m, float* watts, double* timestamp)
 {
+        if (m == NULL) return 0.0f;
         if (watts != NULL) *watts = m->watts;
         if (timestamp != NULL) *timestamp = m->timestamp;
         return m->energy;
@@ -587,8 +588,14 @@ int meters_init()
                         meter_delete(m);
                 }
         }
+        
+        if (meters_count() == 0) {
+                log_warn("meters_init: I could not initialise any meters. "
+                         "Please verify the connected meters if this is not what you expected."
+                         "The program will continue anyway.");
+        }
 
-        return meters_count() == 0;
+        return 0;
 }
 
 void meters_start()
