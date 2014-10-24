@@ -263,7 +263,9 @@ static const char* get_timestamp()
 
 static int _hosts_continue = 1;
 void hosts_remove(int id);
-#define MAX_EXPERIMENTS (10*3)+1
+
+#define EXPERIMENT_ITERATION 3
+#define MAX_EXPERIMENTS (10 * EXPERIMENT_ITERATION) + 1
 
 typedef struct _host_t {
         int id;
@@ -272,6 +274,8 @@ typedef struct _host_t {
         pthread_t thread;
         experiment_t* experiments[MAX_EXPERIMENTS];
         int num_experiments;
+        experiment_t* experiments_to_save[MAX_EXPERIMENTS];
+        int num_experiments_to_save;
         experiment_t* cur_experiment;
         double idle_power;
         FILE* file_csv;
@@ -456,6 +460,9 @@ int host_stop_experiment(host_t* host, message_t* m)
                  e->kflops, e->kflops / e->energy
                  );
 
+        host->experiments_to_save[host->num_experiments_to_save] = e;
+        host->num_experiments_to_save++;
+
         host->cur_experiment = NULL;
 
         return 0;
@@ -464,7 +471,7 @@ int host_stop_experiment(host_t* host, message_t* m)
 int host_experiment_set(host_t* host, message_t* m)
 {        
         if (host->cur_experiment == NULL) {
-                log_err("host_stop_experiment: host %d: no experiment running?!...", host->id);
+                log_err("host_experiment_set: host %d: no experiment running?!...", host->id);
                 return -1;
         }
 
@@ -577,6 +584,22 @@ int host_experiment_updatecompinfo(host_t* host, message_t* m)
         return 0;
 }
 
+int host_experiment_save_average(host_t* host, message_t* m)
+{
+        // we make the average of values of each N last experiment
+
+        int n = host->num_experiments_to_save;
+        
+        double 
+
+        while (n--) {
+                experiment_t* exp = host->experiments_to_save[n];
+                //exp->kflops;
+        }
+
+        host->num_experiments_to_save = 0;
+}
+
 
 int host_handle_message(host_t* host, message_t* m)
 {        
@@ -587,6 +610,7 @@ int host_handle_message(host_t* host, message_t* m)
         case MESSAGE_UPDATE: host_experiment_update(host, m); break;
         case MESSAGE_SETCOMPINFO: host_experiment_setcompinfo(host, m); break;
         case MESSAGE_UPDATECOMPINFO: host_experiment_updatecompinfo(host, m); break;
+        case MESSAGE_SAVE_AVERAGE: host_experiment_save_average(host, m); break;
         default: break;
         }
         return 0;
