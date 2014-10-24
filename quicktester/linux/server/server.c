@@ -152,7 +152,7 @@ void delete_experiment(experiment_t* e)
 
 static int _hosts_continue = 1;
 void hosts_remove(int id);
-#define MAX_EXPERIMENTS 16
+#define MAX_EXPERIMENTS 60
 
 typedef struct _host_t {
         int id;
@@ -281,15 +281,17 @@ int host_experiment_update(host_t* host, message_t* m)
         double delta_t = t - e->time_last;
 
         e->energy += delta_energy;
-        e->energy_idle += e->cpu_load_idle * delta_energy;
-        e->energy_sys += e->cpu_load_sys * delta_energy;
-        e->energy_user += e->cpu_load_user * delta_energy;
-        e->energy_comp += e->cpu_load_comp * delta_energy;
+        e->energy_idle += e->cpu_load_idle * delta_energy / 100.0;
+        e->energy_sys += e->cpu_load_sys * delta_energy / 100.0;
+        e->energy_user += e->cpu_load_user * delta_energy / 100.0;
+        e->energy_comp += e->cpu_load_comp * delta_energy / 100.0;
         e->time_last = t;
         e->energy_last = energy;
 
-        log_info("host_experiment_update: dT %f, dE %f, Watt %f", 
-                 delta_t, delta_energy, delta_energy / delta_t);
+        log_info("host_experiment_update: dT %f, dE %f, Watt %f, Idle %f, Sys %f, User %f, Comp %f", 
+                 delta_t, delta_energy, delta_energy / delta_t, 
+                 e->cpu_load_idle, e->cpu_load_sys,
+                 e->cpu_load_user, e->cpu_load_comp);
 
         return 0;
 }
@@ -441,6 +443,40 @@ void* host_run(void* ptr)
                 host_handle_message(host, m);
         } 
 
+        double idle = 0.0;
+        double energy = 0.0;
+        double duration = 0.0;
+        for (int i = 0; i < host->num_experiments; i++) {
+                experiment_t* e = host->experiments[i];
+                if (strcmp(e->name, "idle") == 0) {
+                        energy += e->energy;
+                        duration += (e->time_end - e->time_start);
+                }
+        }
+        if (duration > 0)
+                idle = energy / duration;
+
+        for (int i = 0; i < host->num_experiments; i++) {
+                experiment_t* e = host->experiments[i];
+
+                double power = e->energy / (e->time_end - e->time_start);
+                double xtra_power = e->energy / (e->time_end - e->time_start) - idle;
+
+                log_info("----------------------------------------");
+                log_info("Experiment:         %s", e->name);
+                log_info("Idle consumption:   %f W", idle);
+                log_info("Duration:           %f sec", e->time_end - e->time_start);
+                log_info("Total energy:       %f J", e->energy);
+                log_info("Idle energy:        %f J", e->energy_idle);
+                log_info("System energy:      %f J", e->energy_sys);
+                log_info("User energy:        %f J", e->energy_user);
+                log_info("Computation energy: %f J", e->energy_comp);
+                log_info("Average power:      %f W", power);
+                log_info("Performance:        %f kflops", e->kflops);
+                log_info("Performance/power   %f kflops/W", e->kflops / power);
+                log_info("Performance/extra P %f kflops/W", e->kflops / xtra_power);
+        }
+
         shutdown(host->socket, 2);
         close(host->socket);
         hosts_remove(host->id);
@@ -532,7 +568,7 @@ static int openServerSocket(const char* address, int port)
         if ((address != NULL) && (strcmp(address, "any") != 0)) {
                 int r = inet_aton(address, &addr);
                 if (r == 0) {
-                        log_err("Daemon: Failed to convert '%s' to an IP address...?!\n", address);
+                        log_err("Daemon: Failed to convert '%s' to an IP address...?!", address);
                         return -1;
                 }
         } else {
@@ -541,7 +577,7 @@ static int openServerSocket(const char* address, int port)
 
         serverSocket = socket(AF_INET, SOCK_STREAM, 0);
         if (serverSocket == -1) {
-                log_err("Daemon: Failed to create server socket\n");
+                log_err("Daemon: Failed to create server socket");
                 return -1;
         }
 
@@ -554,14 +590,14 @@ static int openServerSocket(const char* address, int port)
                  sizeof(struct sockaddr_in)) == -1) {
                 close(serverSocket);
                 serverSocket = -1;
-                log_err("Daemon: Failed to bind server socket\n");
+                log_err("Daemon: Failed to bind server socket");
                 return -1;
         }
         
         if (listen(serverSocket, 10) == -1) {
                 close(serverSocket);
                 serverSocket = -1;
-                log_err("Daemon: Failed to bind server socket\n");
+                log_err("Daemon: Failed to bind server socket");
                 return -1;
         }
 
@@ -581,14 +617,14 @@ static int serverSocketAccept(int serverSocket)
         socklen_t addrlen = sizeof(addr);
 
         if (serverSocket == -1) {
-                log_err("Daemon: Invalid server socket\n");
+                log_err("Daemon: Invalid server socket");
                 return -1;
         }
   
         int clientSocket = accept(serverSocket, (struct sockaddr*) &addr, &addrlen);
   
         if (clientSocket == -1) {
-                log_err("Daemon: Accept failed\n");
+                log_err("Daemon: Accept failed");
                 return -1;
         } 
 
@@ -651,8 +687,7 @@ int main(int argc, char** argv)
 
                         meter = meters_get(id);
                         if (meter == NULL) {
-                                printf("No associated meter found for ID %d.\n", id);
-                                id = -1;
+                                log_warn("No associated meter found for ID %d.\n", id);
                         }
                 }
 
