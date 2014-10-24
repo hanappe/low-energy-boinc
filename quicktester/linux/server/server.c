@@ -257,7 +257,7 @@ static const char* get_timestamp()
 
 static int _hosts_continue = 1;
 void hosts_remove(int id);
-#define MAX_EXPERIMENTS (10*3)+1
+#define MAX_EXPERIMENTS 60
 
 typedef struct _host_t {
         int id;
