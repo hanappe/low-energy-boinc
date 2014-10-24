@@ -130,14 +130,20 @@ typedef struct _experiment_t {
         // fields set and updated by remote host
         char name[64];
         
-        double cpu_usage; // range [0.-1.0]
-        double cpu_load; // range [0.-1.0]
-        double cpu_load_idle; // range [0.-1.0]
-        double cpu_load_sys; // range [0.-1.0]
-        double cpu_load_user; // range [0.-1.0]
-        double cpu_load_comp; // range [0.-1.0]
+        double cpu_usage; // range [0.;1.0]
+        double cpu_load; // range [0.;1.0]
+        double cpu_load_idle; // range [0.;1.0]
+        double cpu_load_sys; // range [0.;1.0]
+        double cpu_load_user; // range [0.;1.0]
+        double cpu_load_comp; // range [0.;1.0]
         double cpu_frequency; // in MHz
         double kflops;
+
+        // Portable PC only >>>>>> UNUSED FOR NOW <<<<<<
+        int on_battery; // 0 or 1
+        double bat_cur_capacity; // in mWh
+        double bat_max_capacity; // in mWh
+        double bat_life_percent;; // range [0.;1.0]
 
         // fields that are updated locally
         double time_start;
@@ -480,6 +486,17 @@ int host_experiment_set(host_t* host, message_t* m)
                 host->cur_experiment->cpu_frequency = m->value;
         else if (strcmp(m->name, "kflops") == 0) 
                 host->cur_experiment->kflops = m->value;
+        // Following lines NOT USED FOR NOW
+        else if (strcmp(m->name, "on_battery") == 0) 
+                host->cur_experiment->on_battery = m->value;
+        else if (strcmp(m->name, "bat_cur_capacity") == 0) 
+                host->cur_experiment->bat_cur_capacity = m->value;
+        else if (strcmp(m->name, "bat_max_capacity") == 0) 
+                host->cur_experiment->bat_max_capacity = m->value;
+        else if (strcmp(m->name, "bat_life_percent") == 0) 
+                host->cur_experiment->bat_life_percent = m->value / 100.;
+
+        
         return 0;
 }
 
