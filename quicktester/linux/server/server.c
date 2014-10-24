@@ -500,15 +500,17 @@ int host_experiment_update(host_t* host, message_t* m)
         char * msg_light = NULL;
 
         e->energy += delta_energy;
-        e->energy_idle += e->cpu_load_idle * delta_energy;
-        e->energy_sys += e->cpu_load_sys * delta_energy;
-        e->energy_user += e->cpu_load_user * delta_energy;
-        e->energy_comp += e->cpu_load_comp * delta_energy;
+        e->energy_idle += e->cpu_load_idle * delta_energy / 100.0;
+        e->energy_sys += e->cpu_load_sys * delta_energy / 100.0;
+        e->energy_user += e->cpu_load_user * delta_energy / 100.0;
+        e->energy_comp += e->cpu_load_comp * delta_energy / 100.0;
         e->time_last = t;
         e->energy_last = energy;
 
-        log_info("host_experiment_update: dT %f, dE %f, Watt %f", 
-                 delta_t, delta_energy, delta_energy / delta_t);
+        log_info("host_experiment_update: dT %f, dE %f, Watt %f, Idle %f, Sys %f, User %f, Comp %f", 
+                 delta_t, delta_energy, delta_energy / delta_t, 
+                 e->cpu_load_idle, e->cpu_load_sys,
+                 e->cpu_load_user, e->cpu_load_comp);
 
         // Create csv line
         msg = create_csv_message(host->id, e, delta_t, delta_energy);
@@ -709,6 +711,40 @@ void* host_run(void* ptr)
 
                 host_handle_message(host, m);
         } 
+
+        double idle = 0.0;
+        double energy = 0.0;
+        double duration = 0.0;
+        for (int i = 0; i < host->num_experiments; i++) {
+                experiment_t* e = host->experiments[i];
+                if (strcmp(e->name, "idle") == 0) {
+                        energy += e->energy;
+                        duration += (e->time_end - e->time_start);
+                }
+        }
+        if (duration > 0)
+                idle = energy / duration;
+
+        for (int i = 0; i < host->num_experiments; i++) {
+                experiment_t* e = host->experiments[i];
+
+                double power = e->energy / (e->time_end - e->time_start);
+                double xtra_power = e->energy / (e->time_end - e->time_start) - idle;
+
+                log_info("----------------------------------------");
+                log_info("Experiment:         %s", e->name);
+                log_info("Idle consumption:   %f W", idle);
+                log_info("Duration:           %f sec", e->time_end - e->time_start);
+                log_info("Total energy:       %f J", e->energy);
+                log_info("Idle energy:        %f J", e->energy_idle);
+                log_info("System energy:      %f J", e->energy_sys);
+                log_info("User energy:        %f J", e->energy_user);
+                log_info("Computation energy: %f J", e->energy_comp);
+                log_info("Average power:      %f W", power);
+                log_info("Performance:        %f kflops", e->kflops);
+                log_info("Performance/power   %f kflops/W", e->kflops / power);
+                log_info("Performance/extra P %f kflops/W", e->kflops / xtra_power);
+        }
 
         shutdown(host->socket, 2);
         close(host->socket);
