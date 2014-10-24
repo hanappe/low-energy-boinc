@@ -10,38 +10,6 @@ extern "C" {
 
 int wmi_initialize();
 
-// Get total cpu load, cpu frequency current app cpu load, and user cpu load
-int wmi_get_cpu_data(
-	long long* cpu_load,
-	long long* cpu_frequency,
-	long long* cpu_load_comp,
-	long long* cpu_load_user
-);
-
-int wmi_get_cpu_load_frequency(
-	long long* cpu_load,
-	long long* cpu_frequency
-);
-
-int wmi_get_cpu_comp_user(
-	long long* cpu_load_comp,
-	long long* cpu_load_user
-);
-
-// Test function
-int wmi_get_cpu_comp_user2(
-	long long* cpu_load_comp,
-	long long* cpu_load_user
-);
-
-int wmi_get_cpu_comp(
-	long long* cpu_load_comp
-);
-
-int wmi_get_cpu_user(
-	long long* cpu_load_user
-);
-
 /// Float version
 
 int wmi_get_cpu_dataf(

@@ -346,32 +346,30 @@ int experiment_stop()
 
 
 namespace {
+	char ip_str[128];
 
-	std::string getAddress() {
-		std::string filename("ip.config.txt");
-		std::string addr;
-		std::ifstream file(filename.c_str());
-		
-		if (!file.good()) {
-			std::cout << filename << ": open error" << std::endl;
-			return addr;
-			//error
-		}
+	const char * getIpFromFile(const char* filename) {
+		FILE* f = 0;
+		fopen(&f, filename, "r" );
 
-		std::streamsize size;
-		if (file.seekg(0, std::ios::end).good()) size = file.tellg();
-		if (file.seekg(0, std::ios::beg).good()) size = file.tellg();
-		
-		if (!file.good()) {
-			std::cout << filename << ": file size error " << std::endl;
-		}
+		memset(ip_str, 0, sizeof(ip_str));
 
-		
-		while(std::getline(file, addr)) {
-			std::cout << "ip: " << addr << std::endl;
+		if (f) {
+			fscanf(f, "%s", ip_str);
 		}
 		
-		return addr;
+		// Replace all "spaces" (tab, end of line etc.) with ''0
+		
+		//char* cur = ip_str;
+		//char* end = ip_str + sizeof(ip_str);
+		//while (cur < end) {
+		//	if (*cur == '\n' || *cur == '\t' || *cur == '\r') {
+		//		*cur = '\0';
+		//	}
+		//	++cur;
+		//}
+		
+		return ip_str;
 	}
 }
 
@@ -380,10 +378,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (log_set_file("log.txt") != 0)
 		return 1;
 
-	std::string s = getAddress();
-	//if (winsocket_init("192.168.0.175") != 0) {
+	const char* ip_string = getIpFromFile("ip.config.txt");
 
-	if (!s.empty() && winsocket_init(s.c_str()) != 0) {
+	if (ip_string && winsocket_init(ip_string) != 0) {
 		log_err("winsocket_init: failed");
 		//return 1;
 	}
