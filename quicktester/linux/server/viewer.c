@@ -173,16 +173,13 @@ int viewers_add(int socket)
 
 int viewers_send(const char* msg)
 {
-        printf("viewers_send BEGIN:\n");
         int success = 0;
         for (int i = 0; i < MAX_VIEWERS; i++) {
                 viewer_t* v = _viewers[i];
                 if (v) {
-                        printf("viewers_send socket: %d\n", v->socket);
                         if (v->socket != -1) {
                                 if (socketSend(v->socket, msg) == -1) {
                                         if (v) {
-                                                printf("free viewer!\n");                                      
                                                 delete_viewer(v);
                                                 _viewers[i] = NULL;
                                         }
@@ -192,7 +189,6 @@ int viewers_send(const char* msg)
                         }
                 }
         }
-        printf("viewers_send END:\n");
         return success;
 }
 

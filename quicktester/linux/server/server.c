@@ -19,7 +19,6 @@
 #include "log.h"
 
 
-
 static int signaled = 0;
 
 /* -------------------------------------------------*/
@@ -40,7 +39,9 @@ enum {
         MESSAGE_SET,
         MESSAGE_UPDATE,
         MESSAGE_SETCOMPINFO,
-        MESSAGE_UPDATECOMPINFO
+        MESSAGE_UPDATECOMPINFO,
+        MESSAGE_SET_BATTERY,
+        MESSAGE_UPDATE_BATTERY
 };
 
 typedef struct _message_t {
@@ -63,7 +64,9 @@ message_t* new_message()
 
 void delete_message(message_t* m)
 {
-        if (m) free(m);
+        if (m) {
+                free(m);
+        }
 }
 
 int message_parse(message_t* m, char** tokens, int num_tokens)
@@ -95,6 +98,19 @@ int message_parse(message_t* m, char** tokens, int num_tokens)
                 if (num_tokens >= 3) {
                         m->value = atof(tokens[2]);
                 }
+
+        } else if (strcmp(tokens[0], "setbattery") == 0) {
+                m->type = MESSAGE_SET_BATTERY;
+                if (num_tokens != 3)
+                        log_warn("message_parse: set message has bad number of arguments");
+                if (num_tokens >= 2) {
+                        strncpy(m->name, tokens[1], sizeof(m->name));
+                        m->name[sizeof(m->name)-1] = 0;
+                }
+                if (num_tokens >= 3) {
+                        m->value = atof(tokens[2]);
+                }
+
         } else if (strcmp(tokens[0], "setcompinfo") == 0) {
                 //printf("SET COMP INFO");
                 m->type = MESSAGE_SETCOMPINFO;
@@ -113,6 +129,8 @@ int message_parse(message_t* m, char** tokens, int num_tokens)
         } else if (strcmp(tokens[0], "updatecompinfo") == 0) {
                 //printf("UPDATE COMP INFO");
                 m->type = MESSAGE_UPDATECOMPINFO;
+        } else if (strcmp(tokens[0], "updatebattery") == 0) {
+                m->type = MESSAGE_UPDATE_BATTERY;
         } else {
                 return 0; // MESSAGE_UNKNOWN
         }
@@ -140,10 +158,14 @@ typedef struct _experiment_t {
         double kflops;
 
         // Portable PC only >>>>>> UNUSED FOR NOW <<<<<<
-        int on_battery; // 0 or 1
+        double on_battery; // <= 0 not on battery, > 0 on battery 
+        double bat_diff_capacity; // in mWh
         double bat_cur_capacity; // in mWh
-        double bat_max_capacity; // in mWh
-        double bat_life_percent;; // range [0.;1.0]
+        double bat_cur_capacity_last; // in mWh
+        double bat_diff_percent; // range [0.;1.0]
+        double bat_life_percent; // range [0.;1.0]
+        double bat_life_percent_last; // range [0.;1.0]
+        double bat_time_last;
 
         // fields that are updated locally
         double time_start;
@@ -186,17 +208,20 @@ static char * create_csv_message(int id, experiment_t* e, double delta_t, double
 
         memset(csv_msg, 0, sizeof(csv_msg));
 
-        sprintf(csv_msg,"data;%d;%f;%f;%f;%f;%f;%f;%f;%f;\n",
+        sprintf(csv_msg,"data;"
+                "%d;"
+                "%f;%f;%f;"
+                "%f;%f;%f;"
+                "%f;%f;"
+                "%d;%f;%f;"
+                "\n",
                 id,
-                e->cpu_load,
-                e->cpu_load_idle,
-                e->cpu_load_sys,
-                e->cpu_load_user,
-                e->cpu_load_comp,
-                e->cpu_frequency,
-                delta_t,
-                delta_energy
+                e->cpu_load, e->cpu_load_idle, e->cpu_load_sys,
+                e->cpu_load_user, e->cpu_load_comp, e->cpu_frequency,
+                delta_t, delta_energy,
+                e->on_battery > 0 ? 1 : 0, e->bat_cur_capacity, e->bat_life_percent
                 );
+
         /*
         sprintf(msg,"%d;%g;%g;%g;%g;%g;%g;%g;\n",
                 id,
@@ -208,19 +233,20 @@ static char * create_csv_message(int id, experiment_t* e, double delta_t, double
                 6.6,
                 7.7);
         */
-        printf("create_csv_message: %s", csv_msg);
+        //printf("create_csv_message: %s", csv_msg);
         
         return csv_msg;//strdup(msg);
 }
 
-static char csv_msg_light[256];
+static char csv_viewer_msg[256];
 
-static char * create_csv_message_light(int id, experiment_t* e, double delta_t, double delta_energy)
+// For Viewer
+static char * create_viewer_message(int id, experiment_t* e, double delta_t, double delta_energy)
 {
 
-        memset(csv_msg_light, 0, sizeof(csv_msg_light));
+        memset(csv_viewer_msg, 0, sizeof(csv_viewer_msg));
 
-        sprintf(csv_msg_light,"data;%d;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;\n",
+        sprintf(csv_viewer_msg,"data;%d;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;\n",
                 id,
                 e->cpu_load,
                 e->cpu_load_idle,
@@ -232,7 +258,7 @@ static char * create_csv_message_light(int id, experiment_t* e, double delta_t, 
                 delta_energy
                 );
         
-        return csv_msg_light;
+        return csv_viewer_msg;
 }
 
 /* -------------------------------------------------*/
@@ -259,6 +285,20 @@ static const char* get_timestamp()
         return _timestamp_buffer;
 }
 
+static const char* get_timestamp_without_space()
+{
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+        if (tv.tv_sec != _timestamp_last) {
+                struct tm r;
+                localtime_r(&tv.tv_sec, &r);
+                snprintf(_timestamp_buffer, 256, "%04d-%02d-%02d_%02d:%02d:%02d",
+                         1900 + r.tm_year, 1 + r.tm_mon, r.tm_mday, 
+                         r.tm_hour, r.tm_min, r.tm_sec);
+        }
+        return _timestamp_buffer;
+}
+
 /* -------------------------------------------------*/
 
 static int _hosts_continue = 1;
@@ -273,8 +313,8 @@ typedef struct _host_t {
         pthread_t thread;
         experiment_t* experiments[MAX_EXPERIMENTS];
         int num_experiments;
-        experiment_t* experiments_to_save[MAX_EXPERIMENTS];
-        int num_experiments_to_save;
+        //experiment_t* experiments_to_save[MAX_EXPERIMENTS];
+        //int num_experiments_to_save;
         experiment_t* cur_experiment;
         double idle_power;
         FILE* file_csv;
@@ -286,6 +326,7 @@ typedef struct _host_t {
         char cpu_number[256];
         char os_name[256];
         char os_version[256];
+        double bat_max_capacity; // in mWh
 
 } host_t;
 
@@ -314,7 +355,12 @@ void host_log_info(host_t* host, const char * format, ...) {
         buffer[1023] = 0;
         va_end(ap);
 
+        // Print to standard output
+        fprintf(stdout, "%s\n", buffer);
+
+        // Write to file
         fprintf(host->file_info, "%s\n", buffer);
+        
         fflush(host->file_info);
 
 }
@@ -342,7 +388,7 @@ host_t* new_host(int id, int socket, meter_t* meter)
         time_t t = get_current_time();
         struct tm tm;
         localtime_r(&t, &tm);
-        sprintf(filename, "%02d.%02d.%02d.slot%d.data.csv", tm.tm_hour, tm.tm_min, tm.tm_sec, id);
+        sprintf(filename, "%s.slot%d.csv", get_timestamp_without_space(), id);
 
 
         printf("new host name: %s\n", filename);
@@ -357,7 +403,7 @@ host_t* new_host(int id, int socket, meter_t* meter)
         // File summary
 
         memset(filename, 0, sizeof(filename));
-        sprintf(filename, "%02d.%02d.%02d.slot%d.info", tm.tm_hour, tm.tm_min, tm.tm_sec, id);
+        sprintf(filename, "%s.slot%d.info", get_timestamp_without_space(), id);
 
         host->file_info = fopen(filename, "a");
         if (host->file_info == NULL) {
@@ -365,13 +411,14 @@ host_t* new_host(int id, int socket, meter_t* meter)
         }
 
 
+        /*
         host_log_info(host,
                  "T\tE\tEidle\tEsys\t"
                  "E_user\tE_comp\tavg Watt\tkflops\tkflops/J"
                  );
         host_log_info(host,
                  "");
-
+        */
         return host;
 }
 
@@ -448,6 +495,7 @@ int host_stop_experiment(host_t* host, message_t* m)
                  e->kflops, e->kflops / e->energy
                  );
 
+        /*
         host_log_info(host, "%s:", e->name);
         host_log_info(host,
                  "%.2f\t%.2f\t%.2f\t%.2f\t"
@@ -458,9 +506,9 @@ int host_stop_experiment(host_t* host, message_t* m)
                  e->energy / (e->time_end - e->time_start), 
                  e->kflops, e->kflops / e->energy
                  );
-
-        host->experiments_to_save[host->num_experiments_to_save] = e;
-        host->num_experiments_to_save++;
+        */
+        //host->experiments_to_save[host->num_experiments_to_save] = e;
+        //host->num_experiments_to_save++;
 
         host->cur_experiment = NULL;
 
@@ -476,11 +524,11 @@ int host_experiment_set(host_t* host, message_t* m)
 
         //log_info("host_experiment_set: %s=%f.", m->name, m->value);
 
-        if (strcmp(m->name, "cpu_usage") == 0) 
+        if (strcmp(m->name, "cpu_usage") == 0) {
                 host->cur_experiment->cpu_usage = m->value / 100.;
-        else if (strcmp(m->name, "cpu_load") == 0) 
+        } else if (strcmp(m->name, "cpu_load") == 0) { 
                 host->cur_experiment->cpu_load = m->value / 100.;
-        else if (strcmp(m->name, "cpu_load_idle") == 0) 
+        } else if (strcmp(m->name, "cpu_load_idle") == 0) 
                 host->cur_experiment->cpu_load_idle = m->value / 100.;
         else if (strcmp(m->name, "cpu_load_sys") == 0) 
                 host->cur_experiment->cpu_load_sys = m->value / 100.;
@@ -492,16 +540,6 @@ int host_experiment_set(host_t* host, message_t* m)
                 host->cur_experiment->cpu_frequency = m->value;
         else if (strcmp(m->name, "kflops") == 0) 
                 host->cur_experiment->kflops = m->value;
-        // Following lines NOT USED FOR NOW
-        else if (strcmp(m->name, "on_battery") == 0) 
-                host->cur_experiment->on_battery = m->value;
-        else if (strcmp(m->name, "bat_cur_capacity") == 0) 
-                host->cur_experiment->bat_cur_capacity = m->value;
-        else if (strcmp(m->name, "bat_max_capacity") == 0) 
-                host->cur_experiment->bat_max_capacity = m->value;
-        else if (strcmp(m->name, "bat_life_percent") == 0) 
-                host->cur_experiment->bat_life_percent = m->value / 100.;
-
         
         return 0;
 }
@@ -519,58 +557,122 @@ int host_experiment_update(host_t* host, message_t* m)
         float delta_energy = energy - e->energy_last;
         double t = get_time();
         double delta_t = t - e->time_last;
+        // Battery
+        //double delta_battery_capacity = e->bat_cur_capacity - e->bat_cur_capacity_last;
+        // Message
         char * msg = NULL;
-        char * msg_light = NULL;
+        char * viewer_msg = NULL;
 
         e->energy += delta_energy;
+        
         e->energy_idle += e->cpu_load_idle * delta_energy / 100.0;
         e->energy_sys += e->cpu_load_sys * delta_energy / 100.0;
         e->energy_user += e->cpu_load_user * delta_energy / 100.0;
         e->energy_comp += e->cpu_load_comp * delta_energy / 100.0;
+       
         e->time_last = t;
         e->energy_last = energy;
 
-        log_info("host_experiment_update: dT %f, dE %f, Watt %f, Idle %f, Sys %f, User %f, Comp %f", 
+        // Battery
+        //e->bat_used += delta_battery_capacity;
+        //e->bat_cur_capacity_last = e->bat_cur_capacity;
+
+        log_info("host_experiment_update: "
+                 "dT %f, dE %f, Watt %f,"
+                 " Idle %f, Sys %f,"
+                 "User %f, Comp %f,",
                  delta_t, delta_energy, delta_energy / delta_t, 
                  e->cpu_load_idle, e->cpu_load_sys,
                  e->cpu_load_user, e->cpu_load_comp);
 
         // Create csv line
         msg = create_csv_message(host->id, e, delta_t, delta_energy);
-        msg_light = create_csv_message_light(host->id, e, delta_t, delta_energy);
-
+        viewer_msg = create_viewer_message(host->id, e, delta_t, delta_energy);
         
-        // Write msg (csv line) in file
+        // Write msg  in file
         host_log_csv(host, msg);
 
-        // Send the light version to all connected viewers
-        viewers_send(msg_light);
-
-        //free(msg);
-
-        // reinit experiment row data
-        //e->cpu_load = ;
+        // Send msg to all connected viewers
+        viewers_send(viewer_msg);
 
         return 0;
 }
+
+
+int host_experiment_set_battery(host_t* host, message_t* m)
+{
+
+        if (host->cur_experiment == NULL) {
+                log_err("host_experiment_set_battery: host %d: no experiment running?!...", host->id);
+                return -1;
+        }
+        
+        if (strcmp(m->name, "on_battery") == 0) {
+                host->cur_experiment->on_battery = m->value;
+        } else if (strcmp(m->name, "bat_cur_capacity") == 0) { 
+                host->cur_experiment->bat_cur_capacity = m->value;
+        } else if (strcmp(m->name, "bat_life_percent") == 0) {
+                host->cur_experiment->bat_life_percent = m->value / 100.;
+        }
+        
+        return 0;
+}
+
+int host_experiment_update_battery(host_t* host, message_t* m)
+{
+
+        if (host->cur_experiment == NULL) {
+                log_err("host_experiment_update_battery: host %d: no experiment running?!...", host->id);
+                return -1;
+        }
+
+        experiment_t* e = host->cur_experiment;
+
+        double t = get_time();
+ 
+        if (e->bat_cur_capacity_last == 0) {
+                e->bat_cur_capacity_last = e->bat_cur_capacity;
+        }
+        if (e->bat_life_percent_last == 0) {
+                e->bat_life_percent_last = e->bat_life_percent;
+
+        }
+        double delta_bat_capacity = e->bat_cur_capacity - e->bat_cur_capacity_last;
+        double delta_bat_percent = e->bat_life_percent - e->bat_life_percent_last;
+
+        e->bat_diff_capacity += delta_bat_capacity;
+        e->bat_diff_percent += delta_bat_percent;
+        log_info("host_experiment_update_battery: "
+                 "dBat %f, dBatp %f,"
+                 "BatDiff %f, BatDiffp %f",
+                 delta_bat_capacity, delta_bat_percent,
+                 e->bat_diff_capacity, e->bat_diff_percent);
+
+
+        e->bat_time_last = t;
+        e->bat_cur_capacity_last = e->bat_cur_capacity;
+        e->bat_life_percent_last = e->bat_life_percent;
+
+
+        return 0;
+}
+
 
 int host_experiment_setcompinfo(host_t* host, message_t* m)
 {
 
         if (strcmp(m->name, "cpu_vendor") == 0) { 
                 sprintf(host->cpu_vendor, m->string_value);
-        }else if (strcmp(m->name, "cpu_model") == 0) { 
-                //host->cpu_load = m->value;
+        } else if (strcmp(m->name, "cpu_model") == 0) { 
                 sprintf(host->cpu_model, m->string_value);
         } else if (strcmp(m->name, "cpu_number") == 0) {
-                //host->cpu_loa = m->value;
                 sprintf(host->cpu_number, m->string_value);
         } else if (strcmp(m->name, "os_name") == 0) {
-                //host->cur_experiment->cpu_load_sys = m->value;
                 sprintf(host->os_name, m->string_value);
         } else if (strcmp(m->name, "os_version") == 0) {
-                //host->cur_experiment->cpu_load_user = m->value;
                 sprintf(host->os_version, m->string_value);        
+        } else if (strcmp(m->name, "bat_max_capacity") == 0) {
+                host->bat_max_capacity = atof(m->string_value);
         }
 
         return 0;
@@ -580,25 +682,9 @@ int host_experiment_updatecompinfo(host_t* host, message_t* m)
 {
 
         // Write csv line in file
-        host_log_csv(host, "compinfo;%s;%s;%s;%s;%s;", host->cpu_vendor, host->cpu_model, host->cpu_number, host->os_name, host->os_version);
+        host_log_csv(host, "computer_info;%s;%s;%s;%s;%s;", host->cpu_vendor, host->cpu_model, host->cpu_number, host->os_name, host->os_version);
 
         return 0;
-}
-
-int host_experiment_save_average(host_t* host, message_t* m)
-{
-        // we make the average of values of each N last experiment
-
-        int n = host->num_experiments_to_save;
-        
-        double 
-
-        while (n--) {
-                experiment_t* exp = host->experiments_to_save[n];
-                //exp->kflops;
-        }
-
-        host->num_experiments_to_save = 0;
 }
 
 
@@ -609,9 +695,11 @@ int host_handle_message(host_t* host, message_t* m)
         case MESSAGE_STOP: host_stop_experiment(host, m); break;
         case MESSAGE_SET: host_experiment_set(host, m); break;
         case MESSAGE_UPDATE: host_experiment_update(host, m); break;
+        case MESSAGE_SET_BATTERY: host_experiment_set_battery(host, m); break;
+        case MESSAGE_UPDATE_BATTERY: host_experiment_update_battery(host, m); break;
         case MESSAGE_SETCOMPINFO: host_experiment_setcompinfo(host, m); break;
         case MESSAGE_UPDATECOMPINFO: host_experiment_updatecompinfo(host, m); break;
-        case MESSAGE_SAVE_AVERAGE: host_experiment_save_average(host, m); break;
+                //case MESSAGE_SAVE_AVERAGE: host_experiment_save_average(host, m); break;
         default: break;
         }
         return 0;
@@ -735,6 +823,105 @@ int host_read_message(host_t* host, message_t* m)
         return message_parse(m, tokens, num_tokens);
 }
 
+void host_print_summary(host_t* host) {
+
+
+        double start_time = 0;
+        double total_duration = 0.0;
+        double total_total_energy = 0.0;
+        double total_performance = 0.0;
+        double total_bat_diff = 0.0;
+        double total_bat_diff_percent = 0.0;
+
+        double idle = 0.0;
+        double energy = 0.0;
+        double duration = 0.0;
+
+        for (int i = 0; i < host->num_experiments; i++) {
+                experiment_t* e = host->experiments[i];
+                if (strcmp(e->name, "idle") == 0) {
+                        energy += e->energy;
+                        duration += (e->time_end - e->time_start);
+                }
+        }
+
+        if (duration > 0)
+                idle = energy / duration;
+
+        // Host info
+        {
+                host_log_info(host, "HostInfo:------------------------------------");
+                host_log_info(host, "CPU vendor:  %s", host->cpu_vendor);
+                host_log_info(host, "CPU model:   %s", host->cpu_model);
+                host_log_info(host, "CPU number:  %s", host->cpu_number);
+                host_log_info(host, "OS name:     %s", host->os_name);
+                host_log_info(host, "OS version:  %s", host->os_version);
+                host_log_info(host, "Battery Max Capacity: %f mWh", host->bat_max_capacity);
+        }
+
+        for (int i = 0; i < host->num_experiments; i++) {
+                experiment_t* e = host->experiments[i];
+
+                double power = e->energy / (e->time_end - e->time_start);
+                double xtra_power = e->energy / (e->time_end - e->time_start) - idle;
+
+                /*log_info("----------------------------------------");
+                log_info("Experiment:         %s", e->name);
+                log_info("Idle consumption:   %f W", idle);
+                log_info("Duration:           %f sec", e->time_end - e->time_start);
+                log_info("Total energy:       %f J", e->energy);
+                log_info("Idle energy:        %f J", e->energy_idle);
+                log_info("System energy:      %f J", e->energy_sys);
+                log_info("User energy:        %f J", e->energy_user);
+                log_info("Computation energy: %f J", e->energy_comp);
+                log_info("Average power:      %f W", power);
+                log_info("Performance:        %f kflops", e->kflops);
+                log_info("Performance/power   %f kflops/W", e->kflops / power);
+                log_info("Performance/extra P %f kflops/W", e->kflops / xtra_power);
+                log_info("Battery diff %f mWh", e->bat_diff_capacity);
+                log_info("Battery diff percent %f", e->bat_diff_percent);
+                */
+                host_log_info(host, "ExperimentInfo--------------------------");
+                host_log_info(host, "Experiment:         %s", e->name);
+                host_log_info(host, "Idle consumption:   %f W", idle);
+                host_log_info(host, "Duration:           %f sec", e->time_end - e->time_start);
+                host_log_info(host, "Total energy:       %f J", e->energy);
+                host_log_info(host, "Idle energy:        %f J", e->energy_idle);
+                host_log_info(host,"System energy:      %f J", e->energy_sys);
+                host_log_info(host, "User energy:        %f J", e->energy_user);
+                host_log_info(host, "Computation energy: %f J", e->energy_comp);
+                host_log_info(host, "Average power:      %f W", power);
+                host_log_info(host, "Performance:        %f kflops", e->kflops);
+                host_log_info(host, "Performance/power   %f kflops/W", e->kflops / power);
+                host_log_info(host, "Performance/extra P %f kflops/W", e->kflops / xtra_power);
+                host_log_info(host, "Battery diff %f mWh", e->bat_diff_capacity);
+                host_log_info(host, "Battery diff percent %f", e->bat_diff_percent);
+                                
+                if (i == 0) {
+                        start_time = e->time_start;
+                } else if (i == host->num_experiments - 1) {
+                        total_duration =  e->time_end - start_time;
+                }
+                
+                total_total_energy += e->energy;
+                total_performance += e->kflops;
+                total_bat_diff += e->bat_diff_capacity;
+                total_bat_diff_percent += e->bat_diff_percent;
+        }
+
+        // Final Info
+        {
+              
+                host_log_info(host, "FinalInfo:------------------------------------");
+                host_log_info(host, "Total duration: %f sec", total_duration);
+                host_log_info(host, "Total energy: %f J", total_total_energy);
+                host_log_info(host, "Total performance: %f kflops", total_performance);
+                host_log_info(host, "Total battery diff: %f mWh", total_bat_diff);
+                host_log_info(host, "Total battery diff percent %f", total_bat_diff_percent);
+        }
+
+}
+
 void* host_run(void* ptr)
 {
         host_t* host = (host_t*) ptr;
@@ -752,40 +939,8 @@ void* host_run(void* ptr)
                 host_handle_message(host, m);
         } 
 
-        double idle = 0.0;
-        double energy = 0.0;
-        double duration = 0.0;
-        for (int i = 0; i < host->num_experiments; i++) {
-                experiment_t* e = host->experiments[i];
-                if (strcmp(e->name, "idle") == 0) {
-                        energy += e->energy;
-                        duration += (e->time_end - e->time_start);
-                }
-        }
-        if (duration > 0)
-                idle = energy / duration;
-
-        for (int i = 0; i < host->num_experiments; i++) {
-                experiment_t* e = host->experiments[i];
-
-                double power = e->energy / (e->time_end - e->time_start);
-                double xtra_power = e->energy / (e->time_end - e->time_start) - idle;
-
-                log_info("----------------------------------------");
-                log_info("Experiment:         %s", e->name);
-                log_info("Idle consumption:   %f W", idle);
-                log_info("Duration:           %f sec", e->time_end - e->time_start);
-                log_info("Total energy:       %f J", e->energy);
-                log_info("Idle energy:        %f J", e->energy_idle);
-                log_info("System energy:      %f J", e->energy_sys);
-                log_info("User energy:        %f J", e->energy_user);
-                log_info("Computation energy: %f J", e->energy_comp);
-                log_info("Average power:      %f W", power);
-                log_info("Performance:        %f kflops", e->kflops);
-                log_info("Performance/power   %f kflops/W", e->kflops / power);
-                log_info("Performance/extra P %f kflops/W", e->kflops / xtra_power);
-        }
-
+        host_print_summary(host);
+        
         shutdown(host->socket, 2);
         close(host->socket);
         hosts_remove(host->id);
@@ -880,7 +1035,46 @@ void hosts_delete()
         }
 }
 
-int server_socket = -1;
+/* -------------------------------------------------*/
+
+int read_slot(int client) {
+        // Reading slot
+                
+        int r;
+        char c;
+        char last_char = 0;
+        int count = 0;
+
+        // We have to take only 2 chars, the slot number et the end of line
+
+        while (count < 2) {                
+                
+                r = read(client, &c, 1);
+                if (r == 0) {
+                        log_warn("read_slot: host %d: disconnected.", client);
+                        break;
+                }
+                if (r == -1) {
+                        log_warn("read_slot: host %d: parsing failed. ending client connection.", client);
+                        break;
+                }
+
+                if (c == '\n' && last_char >= '0' && last_char <= '9') {
+                        return (int) (last_char - '0');
+                } else if (c >= '0' && c <= '9') {
+                        last_char = c;
+                } else {
+                        break;
+                }
+
+                count++;
+        }
+        return -1;
+}
+
+/* -------------------------------------------------*/
+
+static int server_socket = -1;
 
 /* -------------------------------------------------*/
 
@@ -890,11 +1084,11 @@ static int main_ended = 0;
 void main_end() {
 
         if (!main_ended) {
+
                 printf("Finalizing...\n");
                 
                 closeServerSocket(server_socket);
                 server_socket = -1;
-                
                 
                 viewer_server_end();
                 
@@ -908,18 +1102,25 @@ void main_end() {
                         log_err("main: failed to finalize the meters");
                         exit(1);
                 }
+                main_ended = 1;
         }
-
-        main_ended = 1;
 }
 
 
 
 /* -------------------------------------------------*/
+static int lock = 0; // very dirty
 
 void signal_handler(int signum)
 {
-        signaled = 1;
+        if (!lock) {
+                lock = 1;
+
+                signaled = 1;
+                main_end();
+
+                lock = 0;
+        }
 }
 
 /* -------------------------------------------------*/
@@ -964,7 +1165,7 @@ int main(int argc, char** argv)
                 exit(1);
         }
         
-
+        
         while (1) {
 
                 if (signaled)
@@ -973,15 +1174,33 @@ int main(int argc, char** argv)
                 printf("waiting for client...\n");
                 int client = serverSocketAccept(server_socket);
 
-                if (signaled)
-                        break;
-
+                
                 if (client == -1)
                         continue;
 
-                int id = -1;
+                int slot = -1;
                 meter_t* meter = NULL;
                 
+                slot = read_slot(client);
+                
+                if (slot == -1) {
+
+                        log_err("slot not found: %d...", slot);
+                        continue;
+
+                } else {
+
+                        meter = meters_get(slot);
+                        if (meter == NULL) {
+                                log_err("No associated meter found for slot ID %d.", slot);
+                                slot = -1;
+                        }
+
+                        log_info("New connection with slot: %d", slot);
+                        hosts_add(slot, client, meter);
+                }
+
+                /*
                 while (id < 0) {
 
                         if (signaled)
@@ -996,16 +1215,14 @@ int main(int argc, char** argv)
                                 id = buf[0] - '0';
                         }
 
-                        meter = meters_get(id);
-                        if (meter == NULL) {
-                                printf("No associated meter found for ID %d.\n", id);
-                                id = -1;
-                        }
+                        
                 }
-
-                hosts_add(id, client, meter);
+                */
+                
         }
+        
 
+        // Main ending 
         main_end();
 
         return 0;

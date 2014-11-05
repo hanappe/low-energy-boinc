@@ -173,7 +173,6 @@ meter_t* meter_new(int usb_id)
 
         snprintf(m->device, 512, "/dev/ttyUSB%d", usb_id);
         m->device[511] = '\0';
-
         m->fd = -1;
         m->fd = open(m->device, O_RDWR | O_NONBLOCK);
         if (m->fd < 0) {
