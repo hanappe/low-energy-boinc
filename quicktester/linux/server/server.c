@@ -581,8 +581,8 @@ int host_experiment_update(host_t* host, message_t* m)
         if (e->bat_life_percent_last == 0) {
                 e->bat_life_percent_last = e->bat_life_percent;
         }
-        double delta_bat_capacity = e->bat_cur_capacity - e->bat_cur_capacity_last;
-        double delta_bat_percent = e->bat_life_percent - e->bat_life_percent_last;
+        double delta_bat_capacity = e->bat_cur_capacity_last - e->bat_cur_capacity;
+        double delta_bat_percent = e->bat_life_percent_last - e->bat_life_percent;
         delta_energy = 3.6 * delta_bat_capacity; // Conversion from mWh to J
 
         e->bat_diff_capacity += delta_bat_capacity;
