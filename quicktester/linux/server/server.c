@@ -40,8 +40,6 @@ enum {
         MESSAGE_UPDATE,
         MESSAGE_SETCOMPINFO,
         MESSAGE_UPDATECOMPINFO,
-        MESSAGE_SET_BATTERY,
-        MESSAGE_UPDATE_BATTERY
 };
 
 typedef struct _message_t {
@@ -98,19 +96,6 @@ int message_parse(message_t* m, char** tokens, int num_tokens)
                 if (num_tokens >= 3) {
                         m->value = atof(tokens[2]);
                 }
-
-        } else if (strcmp(tokens[0], "setbattery") == 0) {
-                m->type = MESSAGE_SET_BATTERY;
-                if (num_tokens != 3)
-                        log_warn("message_parse: set message has bad number of arguments");
-                if (num_tokens >= 2) {
-                        strncpy(m->name, tokens[1], sizeof(m->name));
-                        m->name[sizeof(m->name)-1] = 0;
-                }
-                if (num_tokens >= 3) {
-                        m->value = atof(tokens[2]);
-                }
-
         } else if (strcmp(tokens[0], "setcompinfo") == 0) {
                 //printf("SET COMP INFO");
                 m->type = MESSAGE_SETCOMPINFO;
@@ -129,8 +114,6 @@ int message_parse(message_t* m, char** tokens, int num_tokens)
         } else if (strcmp(tokens[0], "updatecompinfo") == 0) {
                 //printf("UPDATE COMP INFO");
                 m->type = MESSAGE_UPDATECOMPINFO;
-        } else if (strcmp(tokens[0], "updatebattery") == 0) {
-                m->type = MESSAGE_UPDATE_BATTERY;
         } else {
                 return 0; // MESSAGE_UNKNOWN
         }
@@ -165,17 +148,25 @@ typedef struct _experiment_t {
         double bat_diff_percent; // range [0.;1.0]
         double bat_life_percent; // range [0.;1.0]
         double bat_life_percent_last; // range [0.;1.0]
-        double bat_time_last;
 
         // fields that are updated locally
         double time_start;
         double time_end;
         double time_last;
+
+        // energy measurements, using Watt meter
         double energy;
         double energy_idle;
         double energy_sys;
         double energy_user;
         double energy_comp;
+
+        // energy measurements, using battery
+        double energy_battery;
+        double battery_idle;
+        double battery_sys;
+        double battery_user;
+        double battery_comp;
 
         double energy_last;
 } experiment_t;
@@ -524,11 +515,11 @@ int host_experiment_set(host_t* host, message_t* m)
 
         //log_info("host_experiment_set: %s=%f.", m->name, m->value);
 
-        if (strcmp(m->name, "cpu_usage") == 0) {
+        if (strcmp(m->name, "cpu_usage") == 0)
                 host->cur_experiment->cpu_usage = m->value / 100.;
-        } else if (strcmp(m->name, "cpu_load") == 0) { 
+        else if (strcmp(m->name, "cpu_load") == 0)
                 host->cur_experiment->cpu_load = m->value / 100.;
-        } else if (strcmp(m->name, "cpu_load_idle") == 0) 
+        else if (strcmp(m->name, "cpu_load_idle") == 0) 
                 host->cur_experiment->cpu_load_idle = m->value / 100.;
         else if (strcmp(m->name, "cpu_load_sys") == 0) 
                 host->cur_experiment->cpu_load_sys = m->value / 100.;
@@ -540,6 +531,12 @@ int host_experiment_set(host_t* host, message_t* m)
                 host->cur_experiment->cpu_frequency = m->value;
         else if (strcmp(m->name, "kflops") == 0) 
                 host->cur_experiment->kflops = m->value;
+        else if (strcmp(m->name, "on_battery") == 0)
+                host->cur_experiment->on_battery = m->value;
+        else if (strcmp(m->name, "bat_cur_capacity") == 0) 
+                host->cur_experiment->bat_cur_capacity = m->value;
+        else if (strcmp(m->name, "bat_life_percent") == 0)
+                host->cur_experiment->bat_life_percent = m->value / 100.;
         
         return 0;
 }
@@ -557,9 +554,6 @@ int host_experiment_update(host_t* host, message_t* m)
         float delta_energy = energy - e->energy_last;
         double t = get_time();
         double delta_t = t - e->time_last;
-        // Battery
-        //double delta_battery_capacity = e->bat_cur_capacity - e->bat_cur_capacity_last;
-        // Message
         char * msg = NULL;
         char * viewer_msg = NULL;
 
@@ -569,13 +563,8 @@ int host_experiment_update(host_t* host, message_t* m)
         e->energy_sys += e->cpu_load_sys * delta_energy / 100.0;
         e->energy_user += e->cpu_load_user * delta_energy / 100.0;
         e->energy_comp += e->cpu_load_comp * delta_energy / 100.0;
-       
         e->time_last = t;
         e->energy_last = energy;
-
-        // Battery
-        //e->bat_used += delta_battery_capacity;
-        //e->bat_cur_capacity_last = e->bat_cur_capacity;
 
         log_info("host_experiment_update: "
                  "dT %f, dE %f, Watt %f,"
@@ -584,6 +573,37 @@ int host_experiment_update(host_t* host, message_t* m)
                  delta_t, delta_energy, delta_energy / delta_t, 
                  e->cpu_load_idle, e->cpu_load_sys,
                  e->cpu_load_user, e->cpu_load_comp);
+
+        // Battery
+        if (e->bat_cur_capacity_last == 0) {
+                e->bat_cur_capacity_last = e->bat_cur_capacity;
+        }
+        if (e->bat_life_percent_last == 0) {
+                e->bat_life_percent_last = e->bat_life_percent;
+        }
+        double delta_bat_capacity = e->bat_cur_capacity - e->bat_cur_capacity_last;
+        double delta_bat_percent = e->bat_life_percent - e->bat_life_percent_last;
+        delta_energy = 3.6 * delta_bat_capacity; // Conversion from mWh to J
+
+        e->bat_diff_capacity += delta_bat_capacity;
+        e->bat_diff_percent += delta_bat_percent;
+        log_info("host_experiment_update: "
+                 "dBat %f, dBatp %f,"
+                 "BatDiff %f, BatDiffp %f",
+                 delta_bat_capacity, delta_bat_percent,
+                 e->bat_diff_capacity, e->bat_diff_percent);
+
+        e->energy_battery += delta_energy;
+        e->battery_idle += e->cpu_load_idle * delta_energy / 100.0;
+        e->battery_sys += e->cpu_load_sys * delta_energy / 100.0;
+        e->battery_user += e->cpu_load_user * delta_energy / 100.0;
+        e->battery_comp += e->cpu_load_comp * delta_energy / 100.0;
+
+        e->bat_cur_capacity_last = e->bat_cur_capacity;
+        e->bat_life_percent_last = e->bat_life_percent;
+        
+        //e->bat_used += delta_battery_capacity;
+        //e->bat_cur_capacity_last = e->bat_cur_capacity;
 
         // Create csv line
         msg = create_csv_message(host->id, e, delta_t, delta_energy);
@@ -598,69 +618,8 @@ int host_experiment_update(host_t* host, message_t* m)
         return 0;
 }
 
-
-int host_experiment_set_battery(host_t* host, message_t* m)
-{
-
-        if (host->cur_experiment == NULL) {
-                log_err("host_experiment_set_battery: host %d: no experiment running?!...", host->id);
-                return -1;
-        }
-        
-        if (strcmp(m->name, "on_battery") == 0) {
-                host->cur_experiment->on_battery = m->value;
-        } else if (strcmp(m->name, "bat_cur_capacity") == 0) { 
-                host->cur_experiment->bat_cur_capacity = m->value;
-        } else if (strcmp(m->name, "bat_life_percent") == 0) {
-                host->cur_experiment->bat_life_percent = m->value / 100.;
-        }
-        
-        return 0;
-}
-
-int host_experiment_update_battery(host_t* host, message_t* m)
-{
-
-        if (host->cur_experiment == NULL) {
-                log_err("host_experiment_update_battery: host %d: no experiment running?!...", host->id);
-                return -1;
-        }
-
-        experiment_t* e = host->cur_experiment;
-
-        double t = get_time();
- 
-        if (e->bat_cur_capacity_last == 0) {
-                e->bat_cur_capacity_last = e->bat_cur_capacity;
-        }
-        if (e->bat_life_percent_last == 0) {
-                e->bat_life_percent_last = e->bat_life_percent;
-
-        }
-        double delta_bat_capacity = e->bat_cur_capacity - e->bat_cur_capacity_last;
-        double delta_bat_percent = e->bat_life_percent - e->bat_life_percent_last;
-
-        e->bat_diff_capacity += delta_bat_capacity;
-        e->bat_diff_percent += delta_bat_percent;
-        log_info("host_experiment_update_battery: "
-                 "dBat %f, dBatp %f,"
-                 "BatDiff %f, BatDiffp %f",
-                 delta_bat_capacity, delta_bat_percent,
-                 e->bat_diff_capacity, e->bat_diff_percent);
-
-
-        e->bat_time_last = t;
-        e->bat_cur_capacity_last = e->bat_cur_capacity;
-        e->bat_life_percent_last = e->bat_life_percent;
-
-
-        return 0;
-}
-
-
 int host_experiment_setcompinfo(host_t* host, message_t* m)
 {
-
         if (strcmp(m->name, "cpu_vendor") == 0) { 
                 sprintf(host->cpu_vendor, m->string_value);
         } else if (strcmp(m->name, "cpu_model") == 0) { 
@@ -682,8 +641,9 @@ int host_experiment_updatecompinfo(host_t* host, message_t* m)
 {
 
         // Write csv line in file
-        host_log_csv(host, "computer_info;%s;%s;%s;%s;%s;", host->cpu_vendor, host->cpu_model, host->cpu_number, host->os_name, host->os_version);
-
+        host_log_csv(host, "computer_info;%s;%s;%s;%s;%s;", 
+                     host->cpu_vendor, host->cpu_model, 
+                     host->cpu_number, host->os_name, host->os_version);
         return 0;
 }
 
@@ -695,8 +655,6 @@ int host_handle_message(host_t* host, message_t* m)
         case MESSAGE_STOP: host_stop_experiment(host, m); break;
         case MESSAGE_SET: host_experiment_set(host, m); break;
         case MESSAGE_UPDATE: host_experiment_update(host, m); break;
-        case MESSAGE_SET_BATTERY: host_experiment_set_battery(host, m); break;
-        case MESSAGE_UPDATE_BATTERY: host_experiment_update_battery(host, m); break;
         case MESSAGE_SETCOMPINFO: host_experiment_setcompinfo(host, m); break;
         case MESSAGE_UPDATECOMPINFO: host_experiment_updatecompinfo(host, m); break;
                 //case MESSAGE_SAVE_AVERAGE: host_experiment_save_average(host, m); break;
@@ -823,16 +781,14 @@ int host_read_message(host_t* host, message_t* m)
         return message_parse(m, tokens, num_tokens);
 }
 
-void host_print_summary(host_t* host) {
-
-
+void host_print_summary(host_t* host) 
+{
         double start_time = 0;
         double total_duration = 0.0;
         double total_total_energy = 0.0;
         double total_performance = 0.0;
         double total_bat_diff = 0.0;
         double total_bat_diff_percent = 0.0;
-
         double idle = 0.0;
         double energy = 0.0;
         double duration = 0.0;
@@ -860,10 +816,8 @@ void host_print_summary(host_t* host) {
         }
 
         for (int i = 0; i < host->num_experiments; i++) {
+                double power, xtra_power;
                 experiment_t* e = host->experiments[i];
-
-                double power = e->energy / (e->time_end - e->time_start);
-                double xtra_power = e->energy / (e->time_end - e->time_start) - idle;
 
                 /*log_info("----------------------------------------");
                 log_info("Experiment:         %s", e->name);
@@ -882,20 +836,61 @@ void host_print_summary(host_t* host) {
                 log_info("Battery diff percent %f", e->bat_diff_percent);
                 */
                 host_log_info(host, "ExperimentInfo--------------------------");
-                host_log_info(host, "Experiment:         %s", e->name);
-                host_log_info(host, "Idle consumption:   %f W", idle);
-                host_log_info(host, "Duration:           %f sec", e->time_end - e->time_start);
-                host_log_info(host, "Total energy:       %f J", e->energy);
-                host_log_info(host, "Idle energy:        %f J", e->energy_idle);
-                host_log_info(host,"System energy:      %f J", e->energy_sys);
-                host_log_info(host, "User energy:        %f J", e->energy_user);
-                host_log_info(host, "Computation energy: %f J", e->energy_comp);
-                host_log_info(host, "Average power:      %f W", power);
-                host_log_info(host, "Performance:        %f kflops", e->kflops);
-                host_log_info(host, "Performance/power   %f kflops/W", e->kflops / power);
-                host_log_info(host, "Performance/extra P %f kflops/W", e->kflops / xtra_power);
-                host_log_info(host, "Battery diff %f mWh", e->bat_diff_capacity);
-                host_log_info(host, "Battery diff percent %f", e->bat_diff_percent);
+                host_log_info(host, "Experiment:            %s", e->name);
+                host_log_info(host, "Idle consumption:      %f W", idle);
+                host_log_info(host, "Duration:              %f sec", e->time_end - e->time_start);
+
+                power = e->energy / (e->time_end - e->time_start);
+                xtra_power = e->energy / (e->time_end - e->time_start) - idle;
+                host_log_info(host, "WATT-METER");
+                host_log_info(host, "Total energy:          %f J", e->energy);
+                host_log_info(host, "Idle energy:           %f J", e->energy_idle);
+                host_log_info(host, "System energy:         %f J", e->energy_sys);
+                host_log_info(host, "User energy:           %f J", e->energy_user);
+                host_log_info(host, "Computation energy:    %f J", e->energy_comp);
+                host_log_info(host, "Average power:         %f W", power);
+                host_log_info(host, "Performance:           %f kflops", e->kflops);
+                if (power > 0)
+                        host_log_info(host, "Performance/power      %f kflops/W", 
+                                      e->kflops / power);
+                else
+                        host_log_info(host, "Performance/power      NA");
+
+                if (xtra_power > 0)
+                        host_log_info(host, "Performance/extra P    %f kflops/W", 
+                                      e->kflops / xtra_power);
+                else if (xtra_power < 0)
+                        host_log_info(host, "Performance/extra P    ERROR (<0)", 
+                                      e->kflops / xtra_power);
+                else 
+                        host_log_info(host, "Performance/extra P    NA");
+
+                power = e->energy_battery / (e->time_end - e->time_start);
+                xtra_power = e->energy_battery / (e->time_end - e->time_start) - idle;
+                host_log_info(host, "BATTERY");
+                host_log_info(host, "Total energy:          %f J", e->energy_battery);
+                host_log_info(host, "Idle energy:           %f J", e->battery_idle);
+                host_log_info(host, "System energy:         %f J", e->battery_sys);
+                host_log_info(host, "User energy:           %f J", e->battery_user);
+                host_log_info(host, "Computation energy:    %f J", e->battery_comp);
+                host_log_info(host, "Average power:         %f W", power);
+                host_log_info(host, "Performance:           %f kflops", e->kflops);
+                if (power > 0)
+                        host_log_info(host, "Performance/power      %f kflops/W", 
+                                      e->kflops / power);
+                else
+                        host_log_info(host, "Performance/power      NA");
+
+                if (xtra_power > 0)
+                        host_log_info(host, "Performance/extra P    %f kflops/W", 
+                                      e->kflops / xtra_power);
+                else if (xtra_power < 0)
+                        host_log_info(host, "Performance/extra P    ERROR (<0)", 
+                                      e->kflops / xtra_power);
+                else 
+                        host_log_info(host, "Performance/extra P    NA");
+
+                host_log_info(host, "Battery diff percent   %f", e->bat_diff_percent);
                                 
                 if (i == 0) {
                         start_time = e->time_start;
@@ -911,7 +906,6 @@ void host_print_summary(host_t* host) {
 
         // Final Info
         {
-              
                 host_log_info(host, "FinalInfo:------------------------------------");
                 host_log_info(host, "Total duration: %f sec", total_duration);
                 host_log_info(host, "Total energy: %f J", total_total_energy);
@@ -919,7 +913,6 @@ void host_print_summary(host_t* host) {
                 host_log_info(host, "Total battery diff: %f mWh", total_bat_diff);
                 host_log_info(host, "Total battery diff percent %f", total_bat_diff_percent);
         }
-
 }
 
 void* host_run(void* ptr)
@@ -1221,7 +1214,6 @@ int main(int argc, char** argv)
                 
         }
         
-
         // Main ending 
         main_end();
 
