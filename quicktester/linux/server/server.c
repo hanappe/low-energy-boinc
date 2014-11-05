@@ -839,6 +839,7 @@ void host_print_summary(host_t* host)
                 host_log_info(host, "Experiment:            %s", e->name);
                 host_log_info(host, "Idle consumption:      %f W", idle);
                 host_log_info(host, "Duration:              %f sec", e->time_end - e->time_start);
+                host_log_info(host, "Performance:           %f kflops", e->kflops);
 
                 power = e->energy / (e->time_end - e->time_start);
                 xtra_power = e->energy / (e->time_end - e->time_start) - idle;
@@ -849,7 +850,6 @@ void host_print_summary(host_t* host)
                 host_log_info(host, "User energy:           %f J", e->energy_user);
                 host_log_info(host, "Computation energy:    %f J", e->energy_comp);
                 host_log_info(host, "Average power:         %f W", power);
-                host_log_info(host, "Performance:           %f kflops", e->kflops);
                 if (power > 0)
                         host_log_info(host, "Performance/power      %f kflops/W", 
                                       e->kflops / power);
@@ -859,7 +859,7 @@ void host_print_summary(host_t* host)
                 if (xtra_power > 0)
                         host_log_info(host, "Performance/extra P    %f kflops/W", 
                                       e->kflops / xtra_power);
-                else if (xtra_power < 0)
+                else if (xtra_power < 0.001) // allow for -0.0 and rounding errors
                         host_log_info(host, "Performance/extra P    ERROR (<0)", 
                                       e->kflops / xtra_power);
                 else 
@@ -874,7 +874,6 @@ void host_print_summary(host_t* host)
                 host_log_info(host, "User energy:           %f J", e->battery_user);
                 host_log_info(host, "Computation energy:    %f J", e->battery_comp);
                 host_log_info(host, "Average power:         %f W", power);
-                host_log_info(host, "Performance:           %f kflops", e->kflops);
                 if (power > 0)
                         host_log_info(host, "Performance/power      %f kflops/W", 
                                       e->kflops / power);
@@ -884,7 +883,7 @@ void host_print_summary(host_t* host)
                 if (xtra_power > 0)
                         host_log_info(host, "Performance/extra P    %f kflops/W", 
                                       e->kflops / xtra_power);
-                else if (xtra_power < 0)
+                else if (xtra_power < 0.001) // allow for -0.0 and rounding errors
                         host_log_info(host, "Performance/extra P    ERROR (<0)", 
                                       e->kflops / xtra_power);
                 else 
