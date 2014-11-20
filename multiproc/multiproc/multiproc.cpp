@@ -122,21 +122,49 @@ void experiment_next_state()
 	}
 }
 
+
+#if _DEBUG
+	static _size = 1000;
+	static _idle_sleep = 10 * 1000; 
+#else
+	//int size = 1000;
+	//int idle_sleep = 5 * 1000; 
+	static int _linpack_size = 5000;
+	static int _idle_sleep = 2 * 60 * 1000; 
+#endif
+
+static void set_linpack_size(int size) {
+	_linpack_size = size;
+}
+
+static int get_linpack_size() {
+	return _linpack_size;
+}
+
+static void set_idle_sleep(int sec) {
+	_idle_sleep = sec;
+}
+
+static int get_idle_sleep() {
+	return _idle_sleep;
+}
+
+
 static DWORD experiment_proc(LPVOID param)
 {
 	int compute = 1;
 	char buffer[256];
-#if 0
-	int size = 4000;
-	int idle_sleep = 1 * 60 * 1000; 
+#if _DEBUG
+	int size = 1000;
+	int idle_sleep = 10 * 1000; 
 #else
 	//int size = 1000;
-	//int idle_sleep = 10 * 1000;
-	int size = 2000;
-	int idle_sleep = 10 * 1000; 
+	//int idle_sleep = 5 * 1000; 
+	int size = get_linpack_size();
+	int idle_sleep = get_idle_sleep();
 #endif
 
-	log_info("Experiment started");
+	log_info("Experiment started with size");
 
 	while (experiment_state < EXP_END) {
 
@@ -152,6 +180,7 @@ static DWORD experiment_proc(LPVOID param)
 			
 				throttling_set_cpu_usage(100); compute = 0; break;
 				}
+				
 			case EXP_CPU_100: {
 				printf("state 100\n");
 			
@@ -234,14 +263,14 @@ static DWORD experiment_proc(LPVOID param)
 
 				const int mode = get_computation_mode(); 
 				if (mode == STANDARD) {
-					_snprintf(buffer, sizeof(buffer)-1, "start size-%d_cpu-%d_run-%d\n", size, throttling_get_cpu_usage(), test);
+					_snprintf(buffer, sizeof(buffer)-1, "start size-%d_cpu-%d_run\n", size, throttling_get_cpu_usage());
 				} else if (mode == DRIVER) {
-					_snprintf(buffer, sizeof(buffer)-1, "start size-%d_cpu-100-driver_run%d\n", size, test);
+					_snprintf(buffer, sizeof(buffer)-1, "start size-%d_cpu-100-driver_run\n", size);
 				}
 
 				buffer[sizeof(buffer)-1] = 0;
 
-				if (winsocket_send(buffer) != -1) {
+				if (winsocket_send(buffer) == -1) {
 					log_err("experiment_proc: failed to send START message");
 				}
 
@@ -292,8 +321,8 @@ static DWORD experiment_proc(LPVOID param)
 				buffer[sizeof(buffer)-1] = 0;
 				winsocket_send(buffer);
 
-				if (winsocket_send("stop\n") != -1) {
-					log_err("experiment_proc: failed to send START message");
+				if (winsocket_send("stop\n") == -1) {
+					log_err("experiment_proc: failed to send STOP message");
 				}
 
 			}
@@ -345,32 +374,24 @@ int experiment_stop()
 }
 
 
-namespace {
-	char ip_str[128];
 
-	const char * getIpFromFile(const char* filename) {
-		FILE* f = 0;
-		fopen(&f, filename, "r" );
+char ip_str[128];
 
-		memset(ip_str, 0, sizeof(ip_str));
+int get_config(const char* filename, char** ip, int* slot, int* linpack_size, int* idle_sleep) {
+	int result = -1;
+	FILE* f = 0;
+	fopen(&f, filename, "r" );
 
-		if (f) {
-			fscanf(f, "%s", ip_str);
-		}
-		
-		// Replace all "spaces" (tab, end of line etc.) with ''0
-		
-		//char* cur = ip_str;
-		//char* end = ip_str + sizeof(ip_str);
-		//while (cur < end) {
-		//	if (*cur == '\n' || *cur == '\t' || *cur == '\r') {
-		//		*cur = '\0';
-		//	}
-		//	++cur;
-		//}
-		
-		return ip_str;
+	memset(ip_str, 0, sizeof(ip_str));
+
+	if (f) {
+		fscanf(f, "%s\n%d\n%d\n%d", ip_str, slot, linpack_size, idle_sleep);
+		*ip = ip_str;
+		fclose(f);
+		result = 0; 
 	}
+
+	return result;
 }
 
 int _tmain(int argc, _TCHAR* argv[])
@@ -378,11 +399,31 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (log_set_file("log.txt") != 0)
 		return 1;
 
-	const char* ip_string = getIpFromFile("ip.config.txt");
+	char* ip_string = NULL;
+	int slot = 0;
+	int linpack_size = 0;
+	int idle_sleep = 0; // secondes
+
+	if (get_config("config.txt", &ip_string, &slot, &linpack_size, &idle_sleep) == -1) {
+		log_err("get_config error: file not opened");
+		return -1;
+	}
+
+	printf("Ip: %s, Slot: %d, linpack size: %d, idle_time: %d\n", ip_string, slot, linpack_size, idle_sleep);
+
+	set_linpack_size(linpack_size);
+	set_idle_sleep(idle_sleep);
 
 	if (ip_string && winsocket_init(ip_string) != 0) {
 		log_err("winsocket_init: failed");
-		//return 1;
+		return -1;
+	} else {
+		// Send slot number
+		if (slot >= 0 && slot <= 9) {
+			char slot_string[4];
+			sprintf(slot_string, "%d\n\0", slot);
+			winsocket_send(slot_string);
+		}
 	}
 
 	if (counter_init() != 0) {

@@ -52,7 +52,7 @@ typedef struct _computation_t {
 	computation_data_t* d;
 } computation_t;
 
-#define MAX_COMPUTATIONS 16
+#define MAX_COMPUTATIONS 60
 
 computation_t computations[MAX_COMPUTATIONS];
 
@@ -136,6 +136,7 @@ void computation_wait(int index)
 		log_err("computation_wait: invalid index %d", index);
 		return;
 	}
+
 	if (computations[index].state == NO_PROCESS) {
 		log_err("computation_wait: index %d: no computation running", index);
 		return;
@@ -160,6 +161,8 @@ void computation_terminate(int index)
 
 void computation_suspend(int index)
 {
+	//printf("computation_suspend\n");
+
 	if ((index < 0) || (index >= MAX_COMPUTATIONS)) {
 		log_err("computation_suspend: invalid index %d", index);
 		return;
@@ -175,6 +178,8 @@ void computation_suspend(int index)
 
 void computation_resume(int index)
 {
+	//printf("computation_resume\n");
+
 	if ((index < 0) || (index >= MAX_COMPUTATIONS)) {
 		log_err("computation_resume: invalid index %d", index);
 		return;

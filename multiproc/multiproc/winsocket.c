@@ -14,17 +14,11 @@
 
 static SOCKET _socket = INVALID_SOCKET;
 
-int winsocket_init(const char * address)
+int winsocket_init(const char* address)
 {
 	struct addrinfo* _result = NULL;
     struct addrinfo* _ptr = NULL;
     struct addrinfo _hints;
-	// Temp var, for testing
-	//char address[] = "10.0.1.114";
-	//char address[] = "10.0.1.202";
-	//char address[] = "10.10.10.1";
-	//char address[] = "192.168.0.175";
-	//char * address = NULL;
 	char port[] = "2014";
     WSADATA InitData;
 	int res;
@@ -48,24 +42,24 @@ int winsocket_init(const char * address)
 	// Attempt to connect to an address until one succeeds
 	for(_ptr = _result; _ptr != NULL ;_ptr = _ptr->ai_next) {
 
-    // Create a SOCKET for connecting to server
-    _socket = socket(_ptr->ai_family, _ptr->ai_socktype, 
-        _ptr->ai_protocol);
-    if (_socket == INVALID_SOCKET) {
-        printf("socket failed with error: %ld\n", WSAGetLastError());
-        WSACleanup();
-        return -1;
-    }
+		// Create a SOCKET for connecting to server
+		_socket = socket(_ptr->ai_family, _ptr->ai_socktype, 
+			_ptr->ai_protocol);
+		if (_socket == INVALID_SOCKET) {
+			printf("socket failed with error: %ld\n", WSAGetLastError());
+			WSACleanup();
+			return -1;
+		}
 
-    // Connect to server.
-    res = connect(_socket, _ptr->ai_addr, (int)_ptr->ai_addrlen);
-    if (res == SOCKET_ERROR) {
-        closesocket(_socket);
-        _socket = INVALID_SOCKET;
-        continue;
-    }
-    break;
-}
+		// Connect to server.
+		res = connect(_socket, _ptr->ai_addr, (int)_ptr->ai_addrlen);
+		if (res == SOCKET_ERROR) {
+			closesocket(_socket);
+			_socket = INVALID_SOCKET;
+			continue;
+		}
+		break;
+	} // end for
 
 	freeaddrinfo(_result);
 
@@ -80,7 +74,7 @@ int winsocket_init(const char * address)
 
 int winsocket_send(const char * data)
 {
-	int data_sent;
+	int data_sent = -1;
 
 	//printf("send data");
 	if (_socket == INVALID_SOCKET) {
@@ -89,9 +83,8 @@ int winsocket_send(const char * data)
 		data_sent = send(_socket, data, (int)strlen(data), 0 );
 		if (data_sent == SOCKET_ERROR) {
 			printf("send failed with error: %d\n", WSAGetLastError());
-			//WSACleanup();
-			winsocket_end();
-			return -1;
+			//winsocket_end();
+			//return -1;
 		}
 
 	}
@@ -114,7 +107,6 @@ int winsocket_end()
 
 		// cleanup
 		closesocket(_socket);
-
 		_socket = INVALID_SOCKET;
 	}
 

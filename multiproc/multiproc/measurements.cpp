@@ -36,24 +36,28 @@ static DWORD measurements_proc(LPVOID param)
 	clear_host_info(h);
 	get_host_info(h);
 	//print_host_info(h);
+	float max_capacity = 0;
+	char buffer[1024];
 	
-	char info_buffer[1024];
-	memset(info_buffer, 0, sizeof(info_buffer));
+	battery_get_max_capacity(&max_capacity);
 	
-	snprintf(info_buffer, 1024, 
+	snprintf(buffer, sizeof(buffer), 
 			"setcompinfo cpu_vendor %s\n"
 			"setcompinfo cpu_model %s\n"
 			"setcompinfo cpu_number %d\n"
 			"setcompinfo os_name %s\n"
 			"setcompinfo os_version %s\n"
+			"setcompinfo bat_max_capacity %f\n"
 			//"set memory %f\n"
 			//"set swap %f\n"
 			"updatecompinfo\n",
 			h->p_vendor, h->p_model, h->p_ncpus,
-			h->os_name, h->os_version);
+			h->os_name, h->os_version,
+			max_capacity);
 			//h->m_nbytes, h->m_swap);
+	buffer[sizeof(buffer)-1] = 0;
 
-	winsocket_send(info_buffer);
+	winsocket_send(buffer);
 
 	//Sleep(500000);
 
@@ -62,6 +66,8 @@ static DWORD measurements_proc(LPVOID param)
 	}
 	
 	while (measurements_continue) {
+
+		// Cpu Load
 
 		float cpu_frequency = 0;
 		float cpu_load_comp = 0;
@@ -78,9 +84,11 @@ static DWORD measurements_proc(LPVOID param)
 		float cpu_load = cpu_load_comp + cpu_load_user + cpu_load_sys;
 		float cpu_load_idle = 100 - cpu_load;
 
-		//wmi_get_battery_info();
+		
 
-		char buffer[1024];
+		//printf("Batter: \n current_capacity: %f, max_capacity: %f, life_percent: %f", current_capacity, max_capacity, life_percent);
+
+		//wmi_get_battery_info();
 
 		/*
 		snprintf(buffer, 1024, 
@@ -94,30 +102,73 @@ static DWORD measurements_proc(LPVOID param)
 			cpu_load, cpu_frequency, cpu_load_comp,
 			cpu_load_user, cpu_load_sys, cpu_load_idle);
 		*/
+		float on_battery = 0;
+		float current_capacity = 0;
+		float life_percent = 0;
+
+		if (battery_is_present()) {
+			on_battery = (is_running_on_batteries() == 0) ? 1.0f : 0.0f;
+			battery_get_current_info(&current_capacity, &life_percent);
+		}
+
 		snprintf(buffer, 1024, 
 			"set cpu_load %f\n"
 			"set cpu_load_comp %f\n"
 			"set cpu_load_user %f\n"
+
 			"set cpu_load_sys %f\n"
 			"set cpu_load_idle %f\n"
 			"set cpu_frequency %f\n"
-			"set on_battery %d\n"
+
+			"set on_battery %f\n"
+			"set bat_cur_capacity %f\n"
+			"set bat_life_percent %f\n"
+
 			"update\n",
+
 			cpu_load, cpu_load_comp, cpu_load_user,
 			cpu_load_sys, cpu_load_idle, cpu_frequency,
-			is_running_on_batteries() == 0 ? 1 : 0);
-		
-		buffer[1023] = 0;
+			on_battery, current_capacity, life_percent
+		);
 
-		//
-		//printf("TEST cpu_buffer: %s", buffer);
-		//printf("Cpu load: %f\n", cpu_load);
-		//printf("Cpu freq: %f\n", cpu_frequency);
+		//printf("TEST BATTERY CAPACITY: %f\n", current_capacity);
+		//printf("TEST LIFE PERCENT: %f\n", life_percent);
 
-		
+		buffer[sizeof(buffer)-1] = 0;
+
 		if (winsocket_send(buffer) == -1) {
+			log_err("measurements_proc error: cpu data not sent");
 			return -1;
 		}
+		/*
+		/// Battery
+		if (battery_is_present()) {
+			float current_capacity = 0;
+			float life_percent = 0;
+
+			battery_get_current_info(
+				&current_capacity,
+				&life_percent
+			);
+
+			snprintf(buffer, sizeof(buffer),
+				"setbattery on_battery %f\n"
+				"setbattery bat_cur_capacity %f\n"
+				"setbattery bat_life_percent %f\n"
+				"updatebattery\n",
+				
+				
+			);
+			buffer[sizeof(buffer)-1] = 0;
+
+			//printf("TEST BATTERY CAPACITY: %f\n", current_capacity);
+			//printf("TEST LIFE PERCENT: %f\n", life_percent);
+			
+			if (winsocket_send(buffer) == -1) {
+				log_err("measurements_proc error: battery data not sent");
+				return -1;
+			}
+		}*/
 
 		Sleep(1000);
 	}
@@ -125,9 +176,12 @@ static DWORD measurements_proc(LPVOID param)
 	return 0;
 }
 
-int measurements_start() {
-
-	//battery_init();
+int measurements_start() 
+{
+	if (battery_init()) {
+		log_warn("measurements_start: battery_init failed badly, not running measurements");
+		return -1;
+	}
 	
 	wmi_initialize();
 
@@ -135,8 +189,10 @@ int measurements_start() {
 
 	measurements_thread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) measurements_proc, NULL, 0, &thread_id);
 
-	if (measurements_thread == NULL)
+	if (measurements_thread == NULL) {
+		log_err("measurements_start error, measurements_thread has not been created");
 		return -1;
+	}
 	
 	if (!SetThreadPriority(measurements_thread, THREAD_PRIORITY_HIGHEST)) {
 		log_debug("measurements thread has not been 'prioritized'");

@@ -493,7 +493,6 @@ int wmi_get_cpu_comp_user_sys(float* pcpu_load_comp, float* pcpu_load_user, floa
 			VariantInit(&user);
 			if (pOutParams) {
 				result = pOutParams->Get(L"User", 0, &user, 0, 0);
-			} else {
 				pOutParams->Release();
 			}
 			//std::cout << "result: " << result << std::endl;
@@ -522,7 +521,7 @@ int wmi_get_cpu_comp_user_sys(float* pcpu_load_comp, float* pcpu_load_user, floa
 				}
 			}
 
-			pOutParams->Release();
+			//pOutParams->Release();
 		}
 
 		object->Release();
