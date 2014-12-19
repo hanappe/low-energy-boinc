@@ -72,27 +72,28 @@ void linpack_main(computation_data_t* d)
     size_t  malloc_arg;
 	void *mempool;
 	int arsize = d->size;
+	fprintf(d->out, "linpack_main size param: %d\n", arsize);
 
-        arsize2d = (long)arsize*(long)arsize;
-        memreq=arsize2d*sizeof(REAL)+(long)arsize*sizeof(REAL)+(long)arsize*sizeof(int);
-        fprintf(d->out, "Memory required:  %ldK.\n",(memreq+512L)>>10);
-        malloc_arg=(size_t)memreq;
-        if (malloc_arg!=memreq || (mempool=malloc(malloc_arg))==NULL)
-            {
-            fprintf(d->out, "Not enough memory available for given array size.\n\n");
-            return;
-            }
-        fprintf(d->out, "\n\nLINPACK benchmark, %s precision.\n",PREC);
-        fprintf(d->out, "Machine precision:  %d digits.\n",BASE10DIG);
-        fprintf(d->out, "Array size %d X %d.\n",arsize,arsize);
-        fprintf(d->out, "Average rolled and unrolled performance:\n\n");
-        fprintf(d->out, "    Reps Time(s) DGEFA   DGESL  OVERHEAD    KFLOPS\n");
-        fprintf(d->out, "----------------------------------------------------\n");
-        nreps=1;
-        while (linpack(nreps, arsize, mempool, d) < 10.)
-            nreps*=2;
-        free(mempool);
-        fprintf(d->out, "\n");
+    arsize2d = (long)arsize*(long)arsize;
+    memreq=arsize2d*sizeof(REAL)+(long)arsize*sizeof(REAL)+(long)arsize*sizeof(int);
+    fprintf(d->out, "Memory required:  %ldK.\n",(memreq+512L)>>10);
+    malloc_arg=(size_t)memreq;
+    if (malloc_arg!=memreq || (mempool=malloc(malloc_arg))==NULL)
+        {
+        fprintf(d->out, "Not enough memory available for given array size.\n\n");
+        return;
+        }
+    fprintf(d->out, "\n\nLINPACK benchmark, %s precision.\n",PREC);
+    fprintf(d->out, "Machine precision:  %d digits.\n",BASE10DIG);
+    fprintf(d->out, "Array size %d X %d.\n",arsize,arsize);
+    fprintf(d->out, "Average rolled and unrolled performance:\n\n");
+    fprintf(d->out, "    Reps Time(s) DGEFA   DGESL  OVERHEAD    KFLOPS\n");
+    fprintf(d->out, "----------------------------------------------------\n");
+    nreps=1;
+    while (linpack(nreps, arsize, mempool, d) < 10.)
+        nreps*=2;
+    free(mempool);
+    fprintf(d->out, "\n");
 }
 
 /*
