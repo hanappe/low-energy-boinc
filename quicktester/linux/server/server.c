@@ -210,7 +210,7 @@ static char * create_csv_message(int id, experiment_t* e, double delta_t, double
                 e->cpu_load, e->cpu_load_idle, e->cpu_load_sys,
                 e->cpu_load_user, e->cpu_load_comp, e->cpu_frequency,
                 delta_t, delta_energy,
-                e->on_battery > 0 ? 1 : 0, e->bat_cur_capacity, e->bat_life_percent
+                (e->on_battery > 0) ? 1 : 0, e->bat_cur_capacity, e->bat_life_percent
                 );
 
         /*
@@ -389,7 +389,41 @@ host_t* new_host(int id, int socket, meter_t* meter)
                 log_err("can't create new host file!\n");
         }
 
-        host_log_csv(host, "connected;slot%d;", id);
+        // Write a dummy line and the format of different lines
+        
+        /*
+
+        log_info("host_stop_experiment: "
+                 "T %f, E %f, Eidle %f, Esys %f, "
+                 "E_user %f, E_comp %f, avg Watt %f, kflops %f, kflops/J %f.",
+                 e->time_end - e->time_start,
+                 e->energy, e->energy_idle, e->energy_sys,
+                 e->energy_user, e->energy_comp,  
+                 e->energy / (e->time_end - e->time_start), 
+                 e->kflops, e->kflops / e->energy);
+
+        host_log_csv(host, "stop_experiment;%s;"
+                 "%f;%f;%f;%f;"
+                 "%f;%f;%f;%f;%f;",
+                 e->name, e->time_end - e->time_start, e->energy, e->energy_idle, e->energy_sys,
+                 e->energy_user, e->energy_comp, e->energy / (e->time_end - e->time_start), e->kflops, e->kflops / e->energy
+                 );
+        */
+        {
+                host_log_csv(host, "connected;slot%d;", id);
+                host_log_csv(host, "data-format;"
+                             "slot;"
+                             "cpu_load;cpu_load_idle;cpu_load_sys;"
+                             "cpu_load_user;cpu_load_comp;cpu_frequency;"
+                             "delta_f;delta_energy;"
+                             "on_battery;bat_cur_capacity;bat_life_percent;"
+                             "\n");
+                host_log_csv(host, "stop_experiment-format;"
+                             "name;"
+                             "T(time);E(energy);Eidle;Esys;"
+                             "Euser;Ecomp;avgWatt;kflops;kflops/J;"
+                             "\n");
+        }
 
         // File summary
 
