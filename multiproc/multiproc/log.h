@@ -22,6 +22,10 @@ void log_warn(const char* format, ...);
 void log_info(const char* format, ...);
 void log_debug(const char* format, ...);
 
+const char* log_get_timestamp();
+
+const char* log_get_timestamp_for_filename();
+
 #ifdef __cplusplus
 }
 #endif

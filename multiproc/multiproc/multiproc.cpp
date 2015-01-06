@@ -10,6 +10,7 @@
 #include "counter.h"
 #include "log.h"
 #include "measurements.h"
+#include "cpu_info.h"
 #include "winsocket.h"
 
 #include <iostream>
@@ -30,9 +31,18 @@ enum {
 	EXP_END
 };
 
+static HANDLE experiment_thread = NULL;
+static int experiment_continue = 1;
+static int experiment_state = EXP_IDLE;
+static const int ExperimentIteration = 3;
+
+static int CpuCount;
+
 int count_cpus()
 {
-	return 4;
+	int cpu_c;
+	get_processor_count(cpu_c);
+	return cpu_c;
 }
 
 
@@ -66,7 +76,7 @@ static DWORD throttling_proc(LPVOID param)
 		int msec_sleep = THROTTLING_PERIOD - msec_run;
 
 		if (msec_sleep > 0) {
-			for (int i = 0; i < count_cpus(); i++)
+			for (int i = 0; i < CpuCount; i++)
 				computation_suspend(i);
 
 			//printf("Sleep %d msec\n", msec_sleep);
@@ -77,7 +87,7 @@ static DWORD throttling_proc(LPVOID param)
 			break;
 
 		if (msec_run > 0) {
-			for (int i = 0; i < count_cpus(); i++)
+			for (int i = 0; i < CpuCount; i++)
 				computation_resume(i);
 
 			//printf("Run %d msec\n", msec_run);
@@ -101,7 +111,7 @@ int throttling_start()
 
 int throttling_stop()
 {
-	for (int i = 0; i < count_cpus(); i++)
+	for (int i = 0; i < CpuCount; i++)
 		computation_resume(i);
 	throttling_continue = 0;
     TerminateThread(throttling_thread, 0);
@@ -110,14 +120,11 @@ int throttling_stop()
 	return 0;
 }
 
-static HANDLE experiment_thread = NULL;
-static int experiment_continue = 1;
-static int experiment_state = EXP_IDLE;
 
 void experiment_next_state()
 {
 	experiment_state++;
-	for (int i = 0; i < count_cpus(); i++) {
+	for (int i = 0; i < CpuCount; i++) {
 		computation_terminate(i);
 	}
 }
@@ -164,7 +171,7 @@ static DWORD experiment_proc(LPVOID param)
 	int idle_sleep = get_idle_sleep();
 #endif
 
-	log_info("Experiment started with size");
+	log_info("Experiment started with size: %d", size);
 
 	while (experiment_state < EXP_END) {
 
@@ -175,21 +182,27 @@ static DWORD experiment_proc(LPVOID param)
 		}
 
 		switch (experiment_state) {
+			
 			case EXP_IDLE: {
 				printf("state IDLE\n");
 			
-				throttling_set_cpu_usage(100); compute = 0; break;
-				}
-				
+				throttling_set_cpu_usage(100);
+				compute = 0;
+				break;
+			}
+			
+			
 			case EXP_CPU_100: {
 				printf("state 100\n");
 			
 				throttling_set_cpu_usage(100);
 				compute = 1;
 				throttling_set_activation(1);
+				//throttling_set_activation(0);
 				set_computation_mode(STANDARD);
 				break;
 			}
+			
 			case EXP_CPU_80: {
 				printf("state 80\n");
 				throttling_set_cpu_usage(80);
@@ -222,6 +235,7 @@ static DWORD experiment_proc(LPVOID param)
 				set_computation_mode(STANDARD);
 				break;
 			}
+			
 			case EXP_LPC: {
 				printf("state LPC Driver \n");
 				throttling_set_activation(0);
@@ -234,7 +248,7 @@ static DWORD experiment_proc(LPVOID param)
 			}
 		}
 
-		for (int test = 0; test < 3; test++) {
+		for (int test = 0; test < ExperimentIteration; test++) {
 
 			double start = counter_get();
 			double kflops = 0.0;
@@ -255,7 +269,7 @@ static DWORD experiment_proc(LPVOID param)
 
 			} else {
 
-				computation_data_t** d = (computation_data_t**) malloc(count_cpus() * sizeof(computation_data_t*));
+				computation_data_t** d = (computation_data_t**) malloc(CpuCount * sizeof(computation_data_t*));
 				if (d == NULL) {
 					log_err("experiment_proc: out of memory");
 					return 1;
@@ -273,14 +287,16 @@ static DWORD experiment_proc(LPVOID param)
 				if (winsocket_send(buffer) == -1) {
 					log_err("experiment_proc: failed to send START message");
 				}
-
-				for (int i = 0; i < count_cpus(); i++) {
+				const char* timestamp = log_get_timestamp_for_filename();
+				for (int i = 0; i < CpuCount; i++) {
 
 					if (mode == STANDARD) {
-						_snprintf(buffer, sizeof(buffer)-1, "slot-%d_size-%d_cpu-%d_run-%d.txt", i, size, throttling_get_cpu_usage(), test);
+						_snprintf(buffer, sizeof(buffer)-1, "%s_slot-%d_size-%d_cpu-%d_run-%d.txt", timestamp, i, size, throttling_get_cpu_usage(), test);
 					} else if (mode == DRIVER) {
-						_snprintf(buffer, sizeof(buffer)-1, "slot-%d_size-%d_cpu-100-driver_run%d.txt", i, size, test);
+						_snprintf(buffer, sizeof(buffer)-1, "%s_slot-%d_size-%d_cpu-100-driver_run%d.txt", timestamp, i, size, test);
 					}
+
+					fprintf(stdout, "create file: %s\n", buffer);
 
 					buffer[sizeof(buffer)-1] = 0;
 
@@ -306,11 +322,11 @@ static DWORD experiment_proc(LPVOID param)
 					if (computation_start(i, d[i]) != 0)
 						return 1;
 				}
-				for (int i = 0; i < count_cpus(); i++) {
+				for (int i = 0; i < CpuCount; i++) {
 					computation_wait(i);
 				}
 				kflops = 0.0;
-				for (int i = 0; i < count_cpus(); i++) {
+				for (int i = 0; i < CpuCount; i++) {
 					kflops += d[i]->kflops;
 					delete_computation_data(d[i]);
 				}
@@ -364,7 +380,7 @@ int experiment_start()
 int experiment_stop()
 {
 	experiment_continue = 0;
-	for (int i = 0; i < count_cpus(); i++) {
+	for (int i = 0; i < CpuCount; i++) {
 		computation_terminate(i);
 	}
     WaitForSingleObject(experiment_thread, INFINITE);
@@ -414,6 +430,14 @@ int _tmain(int argc, _TCHAR* argv[])
 	set_linpack_size(linpack_size);
 	set_idle_sleep(idle_sleep);
 
+	CpuCount = count_cpus();
+
+	if (CpuCount <= 0) {
+		log_err("cpu numer: %d", CpuCount);
+		return 1;
+	}
+
+	
 	if (ip_string && winsocket_init(ip_string) != 0) {
 		log_err("winsocket_init: failed");
 		return -1;
@@ -425,6 +449,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			winsocket_send(slot_string);
 		}
 	}
+	
 
 	if (counter_init() != 0) {
 		log_err("counter_init: failed");

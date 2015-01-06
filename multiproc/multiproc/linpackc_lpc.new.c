@@ -80,7 +80,8 @@ void linpack_lpc_main(computation_data_t* d)
 	void *mempool;
 	int arsize = d->size;
 	int ret;
-
+		
+	fprintf(d->out, "linpack_lpc_main size param: %d\n", arsize);
 	
 	lpci = LPCInterfaceNew();
 

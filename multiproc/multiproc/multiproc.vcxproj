@@ -87,7 +87,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="battery.c" />
+    <ClCompile Include="battery_info.c" />
     <ClCompile Include="computation.thread.c" />
     <ClCompile Include="counter.c" />
     <ClCompile Include="cpu_info.cpp" />
@@ -101,7 +101,7 @@
     <ClCompile Include="wmi.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="battery.h" />
+    <ClInclude Include="battery_info.h" />
     <ClInclude Include="computation.h" />
     <ClInclude Include="counter.h" />
     <ClInclude Include="cpu_info.h" />

@@ -37,8 +37,11 @@ void log_set_level(int level)
 static char _timestamp_buffer[256];
 static unsigned long _timestamp_last = 0;
 
+static char _timestamp_buffer_f[256];
+static unsigned long _timestamp_last_f = 0;
+
 // Not re-entrant!
-static const char* get_timestamp()
+const char* log_get_timestamp()
 {
 #if 1
 	DWORD t = GetTickCount() / 1000;
@@ -66,9 +69,37 @@ static const char* get_timestamp()
 #endif
 }
 
+const char* log_get_timestamp_for_filename()
+{
+#if 1
+	DWORD t = GetTickCount() / 1000;
+    if (t != _timestamp_last_f) {
+		SYSTEMTIME st;
+		_timestamp_last_f = t;
+		GetLocalTime(&st);
+		_snprintf(_timestamp_buffer_f, 256, "%04d-%02d-%02d_%02d_%02d_%02d",
+                     st.wYear, st.wMonth, st.wDay, 
+                     st.wHour, st.wMinute, st.wSecond);
+    }
+    return _timestamp_buffer_f;
+
+#else
+	struct timeval tv;
+    gettimeofday(&tv, NULL);
+    if (tv.tv_sec != _timestamp_last) {
+            struct tm r;
+            localtime_r(&tv.tv_sec, &r);
+            snprintf(_timestamp_buffer, 256, "%04d-%02d-%02d_%02d.%02d.%02d",
+                     1900 + r.tm_year, 1 + r.tm_mon, r.tm_mday, 
+                     r.tm_hour, r.tm_min, r.tm_sec);
+    }
+    return _timestamp_buffer;
+#endif
+}
+
 static void log_(int level, const char* s)
 {
-        const char* time = get_timestamp();
+        const char* time = log_get_timestamp();
         const char* type = "Unknown";
         switch (level) {
         case LOG_DEBUG: type = "Debug"; break;

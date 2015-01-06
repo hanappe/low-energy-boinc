@@ -18,7 +18,7 @@
 #include "winsocket.h"
 
 #include "cpu_info.h"
-#include "battery.h"
+#include "battery_info.h"
 #include "wmi.h"
 // Kev
 #ifdef _MSC_VER
